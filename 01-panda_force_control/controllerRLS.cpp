@@ -6,11 +6,8 @@
 #include <iostream>
 #include <string>
 #include <tinyxml2.h>
-#include <type_traits>
-#include <limits>
-#include <cmath>
-#include <iomanip>
-#include <algorithm>
+#include <chrono>
+
 
 
 #include <signal.h>
@@ -47,7 +44,10 @@ std::string EE_FORCE_SENSOR_KEY;
 std::string DESIRED_POS_KEY;
 std::string CURRENT_POS_KEY;
 std::string FORCE_VIRTUAL_KEY;
-
+std::string ANGULAR_VEL_KEY;
+std::string ANGULAR_ACC_KEY;
+std::string LINEAR_ACC_KEY;
+std::string LOCAL_GRAVITY_KEY;
 
 
 // - model
@@ -55,16 +55,7 @@ std::string MASSMATRIX_KEY;
 std::string CORIOLIS_KEY;
 std::string ROBOT_GRAVITY_KEY;
 
-template<class T>
-typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
-    almost_equal(T x, T y)
-{
-    // the machine epsilon has to be scaled to the magnitude of the values used
-    // and multiplied by the desired precision in ULPs (units in the last place)
-    return std::abs(x-y) <= std::numeric_limits<T>::epsilon() * std::abs(x+y)
-    // unless the result is subnormal
-           || std::abs(x-y) < std::numeric_limits<T>::min();
-}
+
 /* Data Matrix Force/Torque virtual A_t based on 
  *"Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
  */
@@ -76,7 +67,7 @@ Eigen::MatrixXd GetDataMatrixLin(Eigen::Vector3d accel_local, Eigen::Vector3d av
 
 /* Adding Measurements Force/Torque to the Data Matrix
  */
-void addMeasurementFT(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A, Eigen::VectorXd& FT, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local);
+void addMeasurementFT(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A, Eigen::VectorXd& FT, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local, const int filter_size);
 /* Adding Measurements Force/Torque to the Data Matrix
  */
 void addMeasurementLin(int& n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A_lin, Eigen::VectorXd& F, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local);
@@ -102,10 +93,7 @@ Eigen::MatrixXd computeK(int n_measurements, Eigen::MatrixXd Sigma, Eigen::Matri
 void computeInertial(int& n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A, Eigen::VectorXd& FT, Eigen::Vector3d accel_local,
 					 Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma, const int filter_size);
 
-void RecursiveTotalLeastSquare(const int n_measurements, const Eigen::VectorXd force_virtual, const Eigen::Vector3d accel_local, const Eigen::Vector3d avel_local, const Eigen::Vector3d aaccel_local, const Eigen::Vector3d g_local, Eigen::MatrixXd& N_1, Eigen::VectorXd& phi, Eigen::MatrixXd& U, Eigen::MatrixXd& S, Eigen::VectorXd& singular_value_S);
-
-Eigen::MatrixXd getInputData(Eigen::VectorXd force_virtual, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local);
-
+void computeInertialNew(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd A, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma); 
 
 int main() {
 	if(flag_simulation)
@@ -118,6 +106,10 @@ int main() {
 		CURRENT_POS_KEY = "sai2::DemoApplication::Panda::controller::logging::current_position";
 		FORCE_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
 		FORCE_COMPUTED_KEY = "sai2::DemoApplication::Panda::simulation::computed_force";
+		ANGULAR_VEL_KEY = "sai2::DemoApplication::Panda::simulation::angular_vel";
+		ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::angular_acc";
+		LINEAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::linear_acc";
+		LOCAL_GRAVITY_KEY = "sai2::DemoApplication::Panda::simulation::g_local";
 
 
 	}
@@ -145,16 +137,15 @@ int main() {
 	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 
 	// read from Redis
-	redis_client.getEigenMatrixDerived(JOINT_ANGLES_KEY, robot->_q);
-	redis_client.getEigenMatrixDerived(JOINT_VELOCITIES_KEY, robot->_dq);
-
+	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
+	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 	VectorXd force_moment = Eigen::VectorXd::Zero(6);
-	redis_client.getEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
+	force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_KEY);
 	//-----FT sensor (simfile: panda_arm_FT_sensor.urdf)------
 	VectorXd force_virtual = Eigen::VectorXd::Zero(6);
 	//-----F sensor (simfile: panda_arm_force_sensor.urdf)------
 	// VectorXd force_virtual = Eigen::VectorXd::Zero(3);
-	
+
 
 	Vector3d current_position = Eigen::Vector3d::Zero();
 	Vector3d desired_position = Eigen::Vector3d::Zero();
@@ -177,6 +168,9 @@ int main() {
 	const string link_name = "link7";
 	const Eigen::Vector3d pos_in_link = Vector3d(0,0,0.15);
 	auto posori_task = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
+
+
+
 	posori_task->_max_velocity = 0.1;
 
 	posori_task->_kp_pos = 100.0;
@@ -189,12 +183,19 @@ int main() {
 
 	// position controller for parameter estimation
 
-	auto pos_task = new Sai2Primitives::PositionTask(robot, link_name, pos_in_link, Eigen::Matrix3d::Zero());
-	pos_task->_max_velocity = 0.1;
-	pos_task->_kp = 100.0;
-	pos_task->_kv = 20.0;
-	pos_task->_ki = 2.0;
-	Eigen::VectorXd pos_task_torques = Eigen::VectorXd::Zero(dof);
+	auto posori_task2 = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
+	posori_task2->_max_velocity = 0.1;
+	posori_task2->_kp_pos = 100.0;
+	posori_task2->_kv_pos = 20.0;
+	posori_task2->_ki_pos = 2.0;
+	posori_task2->_kp_ori = 100.0;
+	posori_task2->_kv_ori = 20.0;
+	posori_task2->_ki_ori = 2.0;
+
+	posori_task2->_velocity_saturation = true;
+	posori_task2->_linear_saturation_velocity = Eigen::Vector3d(0.5,0.5,0.5);
+	posori_task2->_angular_saturation_velocity = Eigen::Vector3d(M_PI/4.0, M_PI/4.0, M_PI/4.0);
+	Eigen::VectorXd posori_task2_torques = Eigen::VectorXd::Zero(dof);
 
 
 	//For inertial parameter estimation
@@ -215,15 +216,7 @@ int main() {
 	Eigen::MatrixXd Sigma = Eigen::MatrixXd::Zero(10,10);
 	Eigen::MatrixXd Inertia = Eigen::MatrixXd::Zero(3,3);
 	Eigen::Vector3d com = Eigen::Vector3d::Zero(3);
-	Eigen::MatrixXd N_1 = Eigen::MatrixXd::Zero(11, 6);
-	Eigen::MatrixXd U = Eigen::MatrixXd::Zero(11,22);
-	Eigen::MatrixXd S = Eigen::MatrixXd::Zero(11,11);
-	Eigen::VectorXd singular_value_S = Eigen::VectorXd::Zero(17);
-	int filter_size = 10;
-	int n=0;
-
-
-
+	int n = 0;
 	int n_measurements = 0;
 
 	Eigen::Vector3d initial_position = Eigen::Vector3d::Zero();
@@ -241,7 +234,6 @@ int main() {
 
 
 
-
 	// joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = 0.2;
@@ -252,27 +244,14 @@ int main() {
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
-	desired_initial_configuration << 0, 10, 0, -125, 0, 135, 0;;
+	desired_initial_configuration << 0, 10, 0, -125, 0, 135, 0;
 	desired_initial_configuration *= M_PI/180.0;
 	joint_task->_goal_position = desired_initial_configuration;
 
 	int state = PARAMETER_ESTIMATION;
-	// position controller for parameter estimation
-
-	auto posori_task2 = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
-	posori_task2->_max_velocity = 0.1;
-	posori_task2->_kp_pos = 100.0;
-	posori_task2->_kv_pos = 20.0;
-	posori_task2->_ki_pos = 2.0;
-	posori_task2->_kp_ori = 100.0;
-	posori_task2->_kv_ori = 20.0;
-	posori_task2->_ki_ori = 2.0;
-
-	Eigen::VectorXd posori_task2_torques = Eigen::VectorXd::Zero(dof);
-
 
 	// create a loop timer
-	double control_freq = 100;
+	double control_freq = 1000;
 	LoopTimer timer;
 	timer.setLoopFrequency(control_freq);   // 1 KHz
 	// timer.setThreadHighPriority();  // make timing more accurate. requires running executable as sudo.
@@ -286,11 +265,14 @@ int main() {
 		timer.waitForNextLoop();
 
 		// read from Redis
-		redis_client.getEigenMatrixDerived(JOINT_ANGLES_KEY, robot->_q);
-		redis_client.getEigenMatrixDerived(JOINT_VELOCITIES_KEY, robot->_dq);
-		redis_client.getEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
-		redis_client.getEigenMatrixDerived(FORCE_VIRTUAL_KEY, force_virtual);
-
+		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
+		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
+		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_KEY);
+		force_virtual = redis_client.getEigenMatrixJSON(FORCE_VIRTUAL_KEY);
+		// accel_local = redis_client.getEigenMatrixJSON(LINEAR_ACC_KEY);
+		// aaccel_local = redis_client.getEigenMatrixJSON(ANGULAR_ACC_KEY);
+		// avel_local = redis_client.getEigenMatrixJSON(ANGULAR_VEL_KEY);
+		// g_local = redis_client.getEigenMatrixJSON(LOCAL_GRAVITY_KEY);
 		// get object acceleration and velocity in Base coordinates
 		robot->linearAcceleration(accel,link_name, Eigen::Vector3d::Zero());
 		robot->angularAcceleration(aaccel,link_name);
@@ -310,13 +292,25 @@ int main() {
 
 
 
-		
+std::chrono::high_resolution_clock::time_point t_start;
+std::chrono::duration<double> t_elapsed;
+
+
+t_start = std::chrono::high_resolution_clock::now();
+
+/* some code */
+
+
+
 		Vector3d sensed_force_sensor_frame = force_moment.head(3);
 		Vector3d sensed_moment_sensor_frame = force_moment.tail(3);
 
 		//std::cout << "Force sensed:  " << force_moment.transpose() << "\n";
    		//std::cout << "Force virtual: " << force_virtual.transpose() << "\n";
-		
+t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
+
+std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
+
 		// update robot model
 		if(flag_simulation)
 		{
@@ -326,8 +320,7 @@ int main() {
 		else
 		{
 			robot->updateKinematics();
-			redis_client.getEigenMatrixDerived(MASSMATRIX_KEY, robot->_M);
-
+			robot->_M = redis_client.getEigenMatrixJSON(MASSMATRIX_KEY);
 			if(inertia_regularization)
 			{
 				robot->_M(4,4) += 0.07;
@@ -336,48 +329,9 @@ int main() {
 			}
 			robot->_M_inv = robot->_M.inverse();
 
-			redis_client.getEigenMatrixDerived(CORIOLIS_KEY,coriolis);
-
+			coriolis = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
 		}
 
-
-
-
-
-		// state machine
-
-		// if(state == PARAMETER_ESTIMATION)
-		// {
-
-		// robot->updateModel();
-		// robot->position(current_position, link_name, pos_in_link);
-
-		// N_prec.setIdentity();
-		// pos_task->updateTaskModel(N_prec);
-		// N_prec = posori_task->_N;
-		// joint_task->updateTaskModel(N_prec);
-
-
-		// double circle_radius = 0.07;
-		// double circle_freq = 0.25;
-		// double time = controller_counter/control_freq;
-		// pos_task->_desired_position = initial_position + circle_radius * Eigen::Vector3d(0.0, sin(2*M_PI*circle_freq*time), cos(2*M_PI*circle_freq*time));
-		// pos_task->_desired_velocity = 2*M_PI*circle_freq*0.001*Eigen::Vector3d(0.0, cos(2*M_PI*circle_freq*time), -sin(2*M_PI*circle_freq*time));
-		
-
-		// // compute task torques
-
-		// pos_task->computeTorques(pos_task_torques);
-
-		// command_torques = pos_task_torques + coriolis;
-		
-		// if(controller_counter>=10)
-		// {
-		// RecursiveTotalLeastSquare(n_measurements, force_virtual, accel_local, avel_local, aaccel_local, g_local, N_1, phi, U, S, singular_value_S);
-		// n_measurements++;
-	 // 	}
-	 // 	//std::cout << "controller conunter" << controller_counter << "\n";
-		// }
 
 		// state machine
 
@@ -391,11 +345,11 @@ int main() {
 		posori_task2->updateTaskModel(N_prec);
 
 
-		double circle_radius = 0.0002*n;
+		double circle_radius = 0.00002*n;
 		double circle_freq = 0.25;
 		double time = controller_counter/control_freq;
 
-		if(controller_counter<=800)
+		if(controller_counter<8000)
 		{
 			 Eigen::Matrix3d R;
 			 double theta = M_PI/3.0;
@@ -407,10 +361,10 @@ int main() {
 			posori_task2->_desired_orientation = R.transpose()*initial_orientation;
 			n++;
 		}
-		else if(controller_counter < 1600)
+		else if(controller_counter < 16000)
 
 			{	
-				if (controller_counter ==801)
+				if (controller_counter ==8000)
 				{
 					n=0;
 				}
@@ -425,15 +379,15 @@ int main() {
 				posori_task2->_desired_velocity = 2*M_PI*circle_freq*circle_radius*Eigen::Vector3d(cos(2*M_PI*circle_freq*time),0.0,  -sin(2*M_PI*circle_freq*time));
 
 
-				posori_task2->_desired_orientation = R.transpose()*posori_task->_desired_orientation;
+				posori_task2->_desired_orientation = R.transpose()*initial_orientation;
 				n++;
 
 			}
 
-		else if(controller_counter < 3200)
+		else if(controller_counter < 30000)
 
 			{	
-				if (controller_counter ==1600)
+				if (controller_counter ==16000)
 				{
 					n=0;
 				}
@@ -446,7 +400,7 @@ int main() {
 				
 				posori_task2->_desired_position = initial_position + circle_radius * Eigen::Vector3d( sin(2*M_PI*circle_freq*time), cos(2*M_PI*circle_freq*time), 0.0);
 				posori_task2->_desired_velocity = 2*M_PI*circle_freq*circle_radius*Eigen::Vector3d(cos(2*M_PI*circle_freq*time),  -sin(2*M_PI*circle_freq*time), 0.0);
-				posori_task2->_desired_orientation = R.transpose()*posori_task->_desired_orientation;
+				posori_task2->_desired_orientation = R.transpose()*initial_orientation;
 				n++;
 
 			}
@@ -458,14 +412,14 @@ int main() {
 
 		command_torques = posori_task2_torques + coriolis;
 
-		
-		RecursiveTotalLeastSquare(n_measurements, force_virtual, accel_local, avel_local, aaccel_local, g_local, N_1, phi, U, S, singular_value_S);
-		 n_measurements++;
+		A = GetDataMatrixFT(accel_local, avel_local, aaccel_local,  g_local);
+
+		computeInertialNew(n_measurements, force_virtual, A, phi,  Sigma);
+
+ 		n_measurements++;
 
 
-
-
-		if(controller_counter ==3200 )
+		if(controller_counter ==30000 )
 			{
 				posori_task2->reInitializeTask();
 				posori_task->_goal_position(2) -= 0.2;
@@ -475,6 +429,7 @@ int main() {
 			}
 
  	 	}
+
 
     			// state machine
 		if(state == GOTO_INITIAL_CONFIG)
@@ -498,8 +453,8 @@ int main() {
 			{
 				posori_task->reInitializeTask();
 				posori_task->_goal_position(2) -= 0.2;
-		
-				
+
+
 				state = GOTO_CONTACT;
 			}
 
@@ -557,7 +512,7 @@ int main() {
 			double circle_radius = 0.1;
 			double circle_freq = 0.25;
 			posori_task->_desired_position = initial_position + circle_radius * Eigen::Vector3d(sin(2*M_PI*circle_freq*timer.elapsedTime()), cos(2*M_PI*circle_freq*timer.elapsedTime()), 0.0);
-			posori_task->_desired_velocity = 2*M_PI*circle_freq*0.001*Eigen::Vector3d(cos(2*M_PI*circle_freq*timer.elapsedTime()), -sin(2*M_PI*circle_freq*timer.elapsedTime()),0.0);
+			posori_task->_desired_velocity = 2*M_PI*circle_freq*circle_radius * Eigen::Vector3d(cos(2*M_PI*circle_freq*timer.elapsedTime()), -sin(2*M_PI*circle_freq*timer.elapsedTime()),0.0);
 
 
 
@@ -587,7 +542,7 @@ int main() {
 			std::cout << "Force sensed:  " << force_moment.transpose() << "\n";
    			std::cout << "Force virtual: " << force_virtual.transpose() << "\n";
    			std::cout << "Force contact: " << f_contact.transpose() << "\n";
-   			
+
 
 		}
 
@@ -597,12 +552,10 @@ int main() {
 		redis_client.setEigenMatrixDerived(CURRENT_POS_KEY, current_position);
 		redis_client.setEigenMatrixDerived(DESIRED_POS_KEY, desired_position);
 		redis_client.setEigenMatrixDerived(FORCE_COMPUTED_KEY, f_contact);
-
-
-
-
-		
-
+		redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
+		redis_client.setEigenMatrixDerived(LINEAR_ACC_KEY, accel_local);
+		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
+		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
 
 
 		controller_counter++;
@@ -634,7 +587,9 @@ int main() {
 // - aaccel_local: object angular acceleration in sensor frame
 // - avel_local: object angular velocity in sensor frame
 // - g_local: gravity vector in sensor frame
-Eigen::MatrixXd GetDataMatrixFT(Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local){
+Eigen::MatrixXd GetDataMatrixFT(Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local)
+
+{
 		Eigen::MatrixXd A_t = Eigen::MatrixXd::Zero(6,10);
 		for (int i=0; i<3; i++)    
 			{
@@ -709,18 +664,18 @@ Eigen::MatrixXd GetDataMatrixLin(Eigen::Vector3d accel_local, Eigen::Vector3d av
 	return A_lin;
 }
 
-void addMeasurementFT(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A, Eigen::VectorXd& FT, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local)
+void addMeasurementFT(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A, Eigen::VectorXd& FT, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local, const int filter_size)
 {	
 	Eigen::MatrixXd a = GetDataMatrixFT(accel_local, avel_local,  aaccel_local, g_local);
 	Eigen::VectorXd ft = force_virtual;
 
-	if(n_measurements == 0)
+	if(n_measurements == 1)
 		{
 			A = a;
 			FT = ft;
 		}
 
-	else
+	else if (n_measurements<filter_size+1)
 		{
 			Eigen::MatrixXd A_temp = A;
 			Eigen::VectorXd FT_temp = FT;
@@ -735,12 +690,17 @@ void addMeasurementFT(int n_measurements, Eigen::VectorXd force_virtual, Eigen::
 			FT.bottomRows(6) = ft;
 		}
 
+	else if (n_measurements==filter_size+1)
+	{
+				std::cout << "error in adding measurement" << n_measurements << "\n";
+
+	}
 
 }
 
 void addMeasurementLin(int& n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd& A_lin, Eigen::VectorXd& F, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local)
 {	
-	
+
 	Eigen::MatrixXd a = GetDataMatrixLin(accel_local, avel_local,  aaccel_local, g_local);
 	Eigen::VectorXd f = force_virtual;
 
@@ -820,7 +780,7 @@ void computeInertial(int& n_measurements, Eigen::VectorXd force_virtual, Eigen::
 	}
 	else if (n_measurements <= filter_size)
 	{	
-		addMeasurementFT(n_measurements, force_virtual, A, FT, accel_local, avel_local, aaccel_local, g_local);
+		addMeasurementFT(n_measurements, force_virtual, A, FT, accel_local, avel_local, aaccel_local, g_local, filter_size);
 
 	}
 
@@ -836,139 +796,21 @@ void computeInertial(int& n_measurements, Eigen::VectorXd force_virtual, Eigen::
 		std::cout << "phi:  " << phi.transpose() << "\n";
 
 	}
-}
-
-Eigen::MatrixXd getInputData(Eigen::VectorXd force_virtual, Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local)
-{
-		Eigen::MatrixXd a = GetDataMatrixFT(accel_local, avel_local,  aaccel_local, g_local);
-		std::cout << "DataM" << a << "\n";
-		Eigen::VectorXd ft = force_virtual;
-		std::cout << "FT" << force_virtual << "\n";
-
-		Eigen::MatrixXd N_1 = Eigen::MatrixXd::Zero(6, 11);
-		Eigen::MatrixXd N = Eigen::MatrixXd::Zero(11, 6);
-		N_1.leftCols(10) = a;
-
-		N_1.rightCols(1) = ft;
 
 
-		N = N_1.transpose();
-		std::cout << "N" << N << "\n";
-
-
-
-		return N;
-}
-void RecursiveTotalLeastSquare(const int n_measurements, const Eigen::VectorXd force_virtual, const Eigen::Vector3d accel_local, const Eigen::Vector3d avel_local, const Eigen::Vector3d aaccel_local, const Eigen::Vector3d g_local, Eigen::MatrixXd& N_1, Eigen::VectorXd& phi, Eigen::MatrixXd& U, Eigen::MatrixXd& S, Eigen::VectorXd& singular_value_S)
-{	
-
-	if(n_measurements==0)
-	{
-		N_1 = getInputData(force_virtual, accel_local, avel_local, aaccel_local, g_local);
-		std::cout << "works for n=0 \n";
-		std::cout << "N transpose" << N_1 << "\n";
-
-		
 	}
 
-	else if(n_measurements == 1)
-		{
-			Eigen::MatrixXd N_2 = getInputData(force_virtual, accel_local, avel_local, aaccel_local, g_local);
-			Eigen::MatrixXd M = Eigen::MatrixXd::Zero(11,12);
-			M.leftCols(6) = N_1;
-			M.rightCols(6) = N_2;
-			Eigen::BDCSVD<MatrixXd> SVDofM(M, ComputeFullU);
-			Eigen::VectorXd singular_value_M = SVDofM.singularValues();
-			S = singular_value_M.asDiagonal();
-
-			U = SVDofM.matrixU();
-			Eigen::MatrixXd L = U.transpose()*N_2;
-			HouseholderQR<MatrixXd> qr(N_2-U*L);
-			Eigen::MatrixXd H = qr.householderQ();
-			Eigen::MatrixXd G = qr.matrixQR().triangularView<Upper>();
-
-			Eigen::MatrixXd Z = Eigen::MatrixXd::Zero(22,17);
-			Z.block(0,0,11,11) = S;
-			Z.block(0,11,11,6) = L;
-			Z.block(11,11,11,6) = G;
-
-			double v = sqrt((G.transpose()*G).determinant());
-
-			Eigen::BDCSVD<MatrixXd> SVDofZ(Z, ComputeFullU);
-			Eigen::MatrixXd U_hat = SVDofZ.matrixU();
-			singular_value_S = SVDofZ.singularValues();
-			S = singular_value_S.asDiagonal();
-			Eigen::MatrixXd aux = Eigen::MatrixXd::Zero(11,22);
-			aux << U, H;
-			U = aux * U_hat;
-
-			S = S.block(0,0,11,11);
-			U = U.block(0,0,11,11);
-
-			std::cout << "N transpose" << N_1 << "\n";
-
-
-
-
-			}
-			else if(n_measurements > 2)
-			{
-				Eigen::MatrixXd N = getInputData(force_virtual, accel_local, avel_local, aaccel_local, g_local);
-				Eigen::MatrixXd L = U.transpose()*N;
-				HouseholderQR<MatrixXd> qr(N-U*L);
-				Eigen::MatrixXd H = qr.householderQ();
-				Eigen::MatrixXd G = qr.matrixQR().triangularView<Upper>();
-				Eigen::MatrixXd Z = Eigen::MatrixXd::Zero(22,17);
-				Z.block(0,0,11,11) = S;
-				Z.block(0,11,11,6) = L;
-				Z.block(11,11,11,6) = G;
-
-				Eigen::BDCSVD<MatrixXd> SVDofZ(Z, ComputeFullU);
-				Eigen::MatrixXd U_hat = SVDofZ.matrixU();
-				singular_value_S = SVDofZ.singularValues();
-				S = singular_value_S.asDiagonal();
-				Eigen::MatrixXd aux = Eigen::MatrixXd::Zero(11,22);
-				aux << U, H;
-				U = aux * U_hat;
-
-				S = S.block(0,0,11,11);
-				U = U.block(0,0,11,11);
-
-
-
-			  for(int i=0;i<10;i++)
-			  {
-			  	phi(i) = - U(i,10)/U(10,10);
-			 }
-			 // std::cout << "Parameter Estimation: "<< phi.transpose() << "\n";
-			 //std::cout << "singular_values S: "<< singular_value_S.transpose() << "\n";
-
-
-		}
+void computeInertialNew(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd A, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma)
+{
+	if (n_measurements == 0)
+	{
+		Sigma = Eigen::MatrixXd::Identity(10,10);
+	}
+	else
+	{
+		Eigen::MatrixXd Lambda = Eigen::MatrixXd::Identity(6, 6);
+		Eigen::MatrixXd K = computeK(Sigma, A, Lambda);
+		Sigma = computeSigma(K, Sigma, A);
+		phi = phi + K*(force_virtual - A*phi);
+	}
 }
-
-
-
-	// else
-	// 	{
-	// 		Eigen::MatrixXd A_temp = A;
-	// 		Eigen::VectorXd FT_temp = FT;
-
-	// 		A.resize(n_measurements*6, 10);
-	// 		FT.resize(n_measurements*6);
-
-	// 		A.topRows((n_measurements-1)*6) = A_temp;
-	// 		FT.topRows((n_measurements-1)*6) = FT_temp;
-
-	// 		A.bottomRows(6) = a;
-	// 		FT.bottomRows(6) = ft;
-	// 	}
-
-
-
-
-
-
-	
-
-	
