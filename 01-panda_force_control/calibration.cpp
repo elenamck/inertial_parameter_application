@@ -119,8 +119,8 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = 0.3;
 
-	joint_task->_kp = 50.0;
-	joint_task->_kv = 14.0;
+	joint_task->_kp = 100.0;
+	joint_task->_kv = 17.0;
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
