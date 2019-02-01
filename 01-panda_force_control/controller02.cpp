@@ -24,8 +24,8 @@ const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
-const bool flag_simulation = true;
-// const bool flag_simulation = false;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 
@@ -52,14 +52,16 @@ int main() {
 	}
 	else
 	{
-		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::actuators::fgc";
+		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::Clyde::actuators::fgc";
 
-		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::sensors::q";
-		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::sensors::dq";
-		MASSMATRIX_KEY = "sai2::FrankaPanda::sensors::model::massmatrix";
-		CORIOLIS_KEY = "sai2::FrankaPanda::sensors::model::coriolis";
-		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::sensors::model::robot_gravity";	
+		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Clyde::sensors::q";
+		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Clyde::sensors::dq";
+		MASSMATRIX_KEY = "sai2::FrankaPanda::Clyde::sensors::model::massmatrix";
+		CORIOLIS_KEY = "sai2::FrankaPanda::Clyde::sensors::model::coriolis";
+		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Clyde::sensors::model::robot_gravity";	
+
 	}
+		// redis keys
 
 	// start redis client
 	auto redis_client = RedisClient();
@@ -110,10 +112,10 @@ int main() {
 
 	// joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
-	joint_task->_max_velocity = 0.1;
+	joint_task->_max_velocity = 0.3;
 
-	joint_task->_kp = 10.0;
-	joint_task->_kv = 5.0;
+	joint_task->_kp = 50.0;
+	joint_task->_kv = 14.0;
 
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 
@@ -167,7 +169,7 @@ int main() {
 
 		// state machine
 		if(state == GOTO_INITIAL_CONFIG)
-		{	std::cout << "current angles: " << robot->_q <<"\n";
+		{	
 			// update tasks models
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
@@ -178,12 +180,12 @@ int main() {
 			command_torques = joint_task_torques + coriolis;
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-			if(config_error.norm() < 0.05)
+			if(config_error.norm() < 0.25)
 			{
 				joint_task->reInitializeTask();
 				robot->rotation(initial_orientation, link_name);
 				state = MOVE;
-				std::cout << "current position: " << posori_task->_current_position <<"\n";
+				
 			}
 
 		}
@@ -207,12 +209,6 @@ int main() {
 
 			command_torques = posori_task_torques + joint_task_torques + coriolis;
 			VectorXd config_error_posori = desired_position - posori_task->_current_position;
-			if(config_error_posori.norm() < 0.05)
-			{	
-				posori_task->reInitializeTask();
-				// command_torques.setZero();
-				// redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-			}
 
 
 
