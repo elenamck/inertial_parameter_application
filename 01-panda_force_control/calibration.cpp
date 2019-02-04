@@ -27,6 +27,7 @@ const std::string robot_name = "FRANKA-PANDA";
 #define  FITH_MEAS		 5
 #define	 SIXTH_MEAS		 6
 #define  SEVENTH_MEAS	 7
+#define  DONE			 8
 
 
 
@@ -44,6 +45,7 @@ std::string JOINT_TORQUES_COMMANDED_KEY;
 std::string JOINT_ANGLES_KEY;
 std::string JOINT_VELOCITIES_KEY;
 std::string EE_FORCE_SENSOR_FORCE_KEY;
+std::string EE_FORCE_SENSOR_KEY;
 
 
 // - model
@@ -51,7 +53,6 @@ std::string MASSMATRIX_KEY;
 std::string CORIOLIS_KEY;
 std::string ROBOT_GRAVITY_KEY;
 
-void logData(const VectorXd& force_moment);
 
 int main() {
 	if(flag_simulation)
@@ -59,7 +60,9 @@ int main() {
 		JOINT_TORQUES_COMMANDED_KEY = "sai2::DemoApplication::Panda::actuators::fgc";
 		JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
-		EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::force_sesnor::force_moment";
+		EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
+
+
 	}
 	else
 	{
@@ -71,6 +74,17 @@ int main() {
 		CORIOLIS_KEY = "sai2::FrankaPanda::Clyde::sensors::model::coriolis";
 		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Clyde::sensors::model::robot_gravity";	
 	}
+
+	//writing data file 
+	ofstream myfile;
+  	myfile.open ("FT_data1.txt");
+  	VectorXd force_moment_sum = VectorXd::Zero(6);
+  	VectorXd force_moment_average = VectorXd::Zero(6);
+  	VectorXd force_moment_average_temp = VectorXd::Zero(6);
+
+
+
+
 
 	// start redis client
 	auto redis_client = RedisClient();
@@ -157,6 +171,8 @@ int main() {
 		// read from Redis
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
+		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_KEY);
+
 		
 		// update robot model
 		if(flag_simulation)
@@ -195,19 +211,23 @@ int main() {
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
 		
-			if(config_error.norm() <= 0.47)
+			if(config_error.norm() <= 0.3)
 			{
 				n++;
-				if(n==5000)
+				if (n>=1500 && n<=2500)
+				{	
+					force_moment_sum += force_moment;
+				}
+				if(n==3000)
 				{
-				redis_client.getEigenMatrixDerived(EE_FORCE_SENSOR_FORCE_KEY, force_moment);
-				logData(force_moment);
-				joint_task->reInitializeTask();
-				state = SECOND_MEAS;
-				n=0;
+					force_moment_average = force_moment_sum / 1000;
+					joint_task->reInitializeTask();
+					state = SECOND_MEAS;
+					n=0;
+				}
 			}
 
-			}
+			
 		
 
 		}
@@ -231,11 +251,17 @@ int main() {
 			if(config_error.norm() <= 0.25)
 			{
 				n++;
-				if (n==5000)
+				if (n>=1500 && n<=2500)
+				{	
+					force_moment_sum += force_moment;
+				}
+				if(n==3000)
 				{
+					force_moment_average_temp = force_moment_sum / 1000;
+					force_moment_average += force_moment_average_temp;
+
 					joint_task->reInitializeTask();
 					state = THIRD_MEAS;
-					std::cout << "State Transition2" << "\n";
 					n=0;
 				}
 			}
@@ -260,12 +286,17 @@ int main() {
 			if(config_error.norm() <= 0.25)
 			{
 				n++;
-				if(n==5000)
+				if (n>=1500 && n<=2500)
 				{	
+					force_moment_sum += force_moment;
+				}
+				if(n==3000)
+				{
+					force_moment_average_temp = force_moment_sum / 1000;
+					force_moment_average += force_moment_average_temp;
+
 					joint_task->reInitializeTask();
-					robot->rotation(initial_orientation, link_name);
 					state = FOURTH_MEAS;
-					std::cout << "State Transition3" << "\n";
 					n=0;
 				}
 			}
@@ -294,13 +325,18 @@ int main() {
 			if(config_error.norm() <= 0.25)
 			{
 				n++;
-				if(n==5000)
+				if (n>=1500 && n<=2500)
+				{	
+					force_moment_sum += force_moment;
+				}
+				if(n==3000)
 				{
+					force_moment_average_temp = force_moment_sum / 1000;
+					force_moment_average += force_moment_average_temp;
+
 					joint_task->reInitializeTask();
-					robot->rotation(initial_orientation, link_name);
-					std::cout << "State Transition4" << "\n";
 					state = FITH_MEAS;
-					n = 0;
+					n=0;
 				}
 			}
 
@@ -326,15 +362,20 @@ int main() {
 			if(config_error.norm() <= 0.25)
 			{
 				n++;
-				if(n==5000)
+				if (n>=1500 && n<=2500)
+				{	
+					force_moment_sum += force_moment;
+				}
+				if(n==3000)
 				{
+					force_moment_average_temp = force_moment_sum / 1000;
+					force_moment_average += force_moment_average_temp;
+
 					joint_task->reInitializeTask();
-					std::cout << "State Transition5" << "\n";
 					state = SIXTH_MEAS;
 					n=0;
 				}
 			}
-
 
 		}
 
@@ -354,16 +395,34 @@ int main() {
 			command_torques = joint_task_torques + coriolis;
 
 
-
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
+			
 			if(config_error.norm() <= 0.25)
 			{
 				n++;
-				if(n==5000)
+				if (n>=1500 && n<=2500)
+				{	
+					force_moment_sum += force_moment;
+				}
+				if(n==3000)
 				{
-				joint_task->reInitializeTask();
+					force_moment_average_temp = force_moment_sum / 1000;
+					force_moment_average += force_moment_average_temp;
+
+					joint_task->reInitializeTask();
+					state = DONE;
+					n=0;
 				}
 			}
+		}
+		if(state == DONE)
+		{
+			force_moment_average = force_moment_average/6;
+			std::cout << force_moment_average.transpose() << "\n";
+			myfile << force_moment_average; 
+			myfile.close();	
+			break;
+
 		}
 
 		//------ Final torques
@@ -383,20 +442,8 @@ int main() {
     std::cout << "Loop updates   : " << timer.elapsedCycles() << "\n";
     std::cout << "Loop frequency : " << timer.elapsedCycles()/end_time << "Hz\n";
 
+    
+
 
     return 0;
 }
-void logData(const VectorXd& force_moment)
-{
- ofstream myfile;
-  myfile.open ("FT_data.txt");
-  if (myfile.is_open())
-  {
-  	std::cout << "file is open"; 
-  myfile << force_moment << endl;
-  } else
-  {
-  	std::cout << "error opening file"; 
-  }
-  myfile.close();
- }
