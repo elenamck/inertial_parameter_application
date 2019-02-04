@@ -4,8 +4,10 @@
 #include "Sai2Primitives.h"
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <tinyxml2.h>
+
 
 #include <signal.h>
 bool runloop = true;
@@ -31,7 +33,7 @@ const std::string robot_name = "FRANKA-PANDA";
 unsigned long long controller_counter = 0;
 
 const bool flag_simulation = true;
-// const bool flag_simulation = false;
+//const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 
@@ -41,7 +43,7 @@ std::string JOINT_TORQUES_COMMANDED_KEY;
 // - read:
 std::string JOINT_ANGLES_KEY;
 std::string JOINT_VELOCITIES_KEY;
-std::string EE_FORCE_SENSOR_KEY;
+std::string EE_FORCE_SENSOR_FORCE_KEY;
 
 
 // - model
@@ -49,18 +51,20 @@ std::string MASSMATRIX_KEY;
 std::string CORIOLIS_KEY;
 std::string ROBOT_GRAVITY_KEY;
 
+void logData(const VectorXd& force_moment);
+
 int main() {
 	if(flag_simulation)
 	{
 		JOINT_TORQUES_COMMANDED_KEY = "sai2::DemoApplication::Panda::actuators::fgc";
 		JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
-		EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::force_sesnor::force_moment";
+		EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::force_sesnor::force_moment";
 	}
 	else
 	{
 		JOINT_TORQUES_COMMANDED_KEY = "sai2::FrankaPanda::Clyde::actuators::fgc";
-
+		EE_FORCE_SENSOR_FORCE_KEY = "sai2::optoforceSensor::6Dsensor::force";
 		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Clyde::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Clyde::sensors::dq";
 		MASSMATRIX_KEY = "sai2::FrankaPanda::Clyde::sensors::model::massmatrix";
@@ -95,6 +99,7 @@ int main() {
 	VectorXd command_torques = VectorXd::Zero(dof);
 	VectorXd coriolis = VectorXd::Zero(dof);
 	MatrixXd N_prec = MatrixXd::Identity(dof,dof);
+	VectorXd force_moment = VectorXd::Zero(6);
 
 	// pos ori controller
 	const string link_name = "link7";
@@ -122,6 +127,8 @@ int main() {
 	joint_task->_kp = 100.0;
 	joint_task->_kv = 17.0;
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
+
+	double n = 0; // variable to wait 2 sec in pose
 
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	//desired_initial_configuration << 0, 0, 0, 0, 0, 0, 0;
@@ -187,12 +194,21 @@ int main() {
 
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-			if(config_error.norm() <= 0.25)
+		
+			if(config_error.norm() <= 0.47)
 			{
+				n++;
+				if(n==5000)
+				{
+				redis_client.getEigenMatrixDerived(EE_FORCE_SENSOR_FORCE_KEY, force_moment);
+				logData(force_moment);
 				joint_task->reInitializeTask();
 				state = SECOND_MEAS;
-				std::cout << "State Transition1" << "\n";
+				n=0;
 			}
+
+			}
+		
 
 		}
 		if(state == SECOND_MEAS)
@@ -214,10 +230,14 @@ int main() {
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
 			if(config_error.norm() <= 0.25)
 			{
-				joint_task->reInitializeTask();
-				robot->rotation(initial_orientation, link_name);
-				state = THIRD_MEAS;
-				std::cout << "State Transition2" << "\n";
+				n++;
+				if (n==5000)
+				{
+					joint_task->reInitializeTask();
+					state = THIRD_MEAS;
+					std::cout << "State Transition2" << "\n";
+					n=0;
+				}
 			}
 		}
 		if(state == THIRD_MEAS)
@@ -239,11 +259,17 @@ int main() {
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
 			if(config_error.norm() <= 0.25)
 			{
-				joint_task->reInitializeTask();
-				robot->rotation(initial_orientation, link_name);
-				state = FOURTH_MEAS;
-				std::cout << "State Transition3" << "\n";
+				n++;
+				if(n==5000)
+				{	
+					joint_task->reInitializeTask();
+					robot->rotation(initial_orientation, link_name);
+					state = FOURTH_MEAS;
+					std::cout << "State Transition3" << "\n";
+					n=0;
+				}
 			}
+
 
 
 		}
@@ -267,10 +293,15 @@ int main() {
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
 			if(config_error.norm() <= 0.25)
 			{
-				joint_task->reInitializeTask();
-				robot->rotation(initial_orientation, link_name);
-				std::cout << "State Transition4" << "\n";
-				state = FITH_MEAS;
+				n++;
+				if(n==5000)
+				{
+					joint_task->reInitializeTask();
+					robot->rotation(initial_orientation, link_name);
+					std::cout << "State Transition4" << "\n";
+					state = FITH_MEAS;
+					n = 0;
+				}
 			}
 
 
@@ -294,10 +325,14 @@ int main() {
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
 			if(config_error.norm() <= 0.25)
 			{
-				joint_task->reInitializeTask();
-				robot->rotation(initial_orientation, link_name);
-				std::cout << "State Transition5" << "\n";
-				state = SIXTH_MEAS;
+				n++;
+				if(n==5000)
+				{
+					joint_task->reInitializeTask();
+					std::cout << "State Transition5" << "\n";
+					state = SIXTH_MEAS;
+					n=0;
+				}
 			}
 
 
@@ -323,8 +358,11 @@ int main() {
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
 			if(config_error.norm() <= 0.25)
 			{
+				n++;
+				if(n==5000)
+				{
 				joint_task->reInitializeTask();
-				robot->rotation(initial_orientation, link_name);
+				}
 			}
 		}
 
@@ -348,3 +386,17 @@ int main() {
 
     return 0;
 }
+void logData(const VectorXd& force_moment)
+{
+ ofstream myfile;
+  myfile.open ("FT_data.txt");
+  if (myfile.is_open())
+  {
+  	std::cout << "file is open"; 
+  myfile << force_moment << endl;
+  } else
+  {
+  	std::cout << "error opening file"; 
+  }
+  myfile.close();
+ }
