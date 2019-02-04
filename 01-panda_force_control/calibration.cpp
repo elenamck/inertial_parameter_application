@@ -33,8 +33,8 @@ const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
-const bool flag_simulation = true;
-//const bool flag_simulation = false;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 
@@ -78,6 +78,7 @@ int main() {
 	//writing data file 
 	ofstream myfile;
   	myfile.open ("FT_data1.txt");
+  	ifstream bias;
   	VectorXd force_moment_sum = VectorXd::Zero(6);
   	VectorXd force_moment_average = VectorXd::Zero(6);
   	VectorXd force_moment_average_temp = VectorXd::Zero(6);
@@ -171,7 +172,7 @@ int main() {
 		// read from Redis
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
-		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_KEY);
+		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
 
 		
 		// update robot model
@@ -210,9 +211,9 @@ int main() {
 
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-		
-			if(config_error.norm() <= 0.3)
+			if(config_error.norm() <= 0.6)
 			{
+				
 				n++;
 				if (n>=1500 && n<=2500)
 				{	
@@ -221,6 +222,9 @@ int main() {
 				if(n==3000)
 				{
 					force_moment_average = force_moment_sum / 1000;
+					std::cout << "average1" << force_moment_average << "\n";
+					force_moment_sum = VectorXd::Zero(6);
+
 					joint_task->reInitializeTask();
 					state = SECOND_MEAS;
 					n=0;
@@ -258,8 +262,9 @@ int main() {
 				if(n==3000)
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
+					std::cout << "average2" << force_moment_average_temp << "\n";
 					force_moment_average += force_moment_average_temp;
-
+					force_moment_sum = VectorXd::Zero(6);
 					joint_task->reInitializeTask();
 					state = THIRD_MEAS;
 					n=0;
@@ -293,8 +298,9 @@ int main() {
 				if(n==3000)
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
+					std::cout << "average2" << force_moment_average_temp << "\n";
 					force_moment_average += force_moment_average_temp;
-
+					force_moment_sum = VectorXd::Zero(6);
 					joint_task->reInitializeTask();
 					state = FOURTH_MEAS;
 					n=0;
@@ -332,8 +338,9 @@ int main() {
 				if(n==3000)
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
+					std::cout << "average2" << force_moment_average_temp << "\n";
 					force_moment_average += force_moment_average_temp;
-
+					force_moment_sum = VectorXd::Zero(6);
 					joint_task->reInitializeTask();
 					state = FITH_MEAS;
 					n=0;
@@ -369,8 +376,9 @@ int main() {
 				if(n==3000)
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
+					std::cout << "average2" << force_moment_average_temp << "\n";
 					force_moment_average += force_moment_average_temp;
-
+					force_moment_sum = VectorXd::Zero(6);
 					joint_task->reInitializeTask();
 					state = SIXTH_MEAS;
 					n=0;
@@ -407,8 +415,9 @@ int main() {
 				if(n==3000)
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
+					std::cout << "average2" << force_moment_average_temp << "\n";
 					force_moment_average += force_moment_average_temp;
-
+					force_moment_sum = VectorXd::Zero(6);
 					joint_task->reInitializeTask();
 					state = DONE;
 					n=0;
@@ -421,6 +430,22 @@ int main() {
 			std::cout << force_moment_average.transpose() << "\n";
 			myfile << force_moment_average; 
 			myfile.close();	
+			bias.open("FT_data1.txt");
+			if (!bias)  {                     // if it does not work
+        std::cout << "Can't open Data!\n";
+    		}
+    		else{
+    			VectorXd force_torque_bias = VectorXd::Zero(6);
+    			for (int row ; row<6; row++)
+    			{
+    				double value = 0.0;
+    				bias >> value;
+    				force_torque_bias(row) = value;
+    			}
+    			bias.close();
+    			cout << "bias" << force_torque_bias << "\n";
+    		}
+
 			break;
 
 		}
