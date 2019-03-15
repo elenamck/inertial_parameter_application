@@ -76,8 +76,10 @@ int main() {
 	}
 
 	//writing data file 
-	//ofstream myfile;
-  	//myfile.open ("FT_data1.txt");
+
+	ofstream myfile;
+  	myfile.open ("FT_data1.txt");
+
   	VectorXd force_moment_sum = VectorXd::Zero(6);
   	VectorXd force_moment_average = VectorXd::Zero(6);
   	VectorXd force_moment_average_temp = VectorXd::Zero(6);
@@ -213,6 +215,7 @@ int main() {
 
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
+
 			cout << "config error norm" << config_error.norm() << endl;
 			if(config_error.norm() <= 0.267)
 			{
@@ -223,6 +226,7 @@ int main() {
 					force_moment_sum += force_moment;
 				}
 				if(n==5000)
+
 				{
 					force_moment_average = force_moment_sum / 1000;
 					std::cout << "average1" << force_moment_average << "\n";
@@ -258,11 +262,13 @@ int main() {
 			if(config_error.norm() <= 0.2)
 			{
 				n++;
+
 				if (n>=2000 && n<=3000)
 				{	
 					force_moment_sum += force_moment;
 				}
 				if(n==5000)
+
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
 					std::cout << "average2" << force_moment_average_temp << "\n";
@@ -294,11 +300,13 @@ int main() {
 			if(config_error.norm() <= 0.2)
 			{
 				n++;
+
 				if (n>=2000 && n<=3000)
 				{	
 					force_moment_sum += force_moment;
 				}
 				if(n==5000)
+
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
 					std::cout << "average2" << force_moment_average_temp << "\n";
@@ -334,11 +342,13 @@ int main() {
 			if(config_error.norm() <= 0.2)
 			{
 				n++;
+
 				if (n>=2000 && n<=3000)
 				{	
 					force_moment_sum += force_moment;
 				}
 				if(n==5000)
+
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
 					std::cout << "average2" << force_moment_average_temp << "\n";
@@ -372,11 +382,13 @@ int main() {
 			if(config_error.norm() <= 0.2)
 			{
 				n++;
+
 				if (n>=2000 && n<=3000)
 				{	
 					force_moment_sum += force_moment;
 				}
 				if(n==5000)
+
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
 					std::cout << "average2" << force_moment_average_temp << "\n";
@@ -407,7 +419,7 @@ int main() {
 
 
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-			
+
 			if(config_error.norm() <= 0.2)
 			{
 				n++;
@@ -417,6 +429,7 @@ int main() {
 					force_moment_sum += force_moment;
 				}
 				if(n==5000)
+
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
 					std::cout << "average2" << force_moment_average_temp << "\n";
@@ -432,8 +445,9 @@ int main() {
 		{
 			force_moment_average = force_moment_average/6;
 			std::cout << force_moment_average.transpose() << "\n";
-			//myfile << force_moment_average; 
-			//myfile.close();	
+
+			myfile << force_moment_average; 
+			myfile.close();	
 
 
 			break;
