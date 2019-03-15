@@ -37,6 +37,7 @@ const bool inertia_regularization = true;
 // - write:
 std::string JOINT_TORQUES_COMMANDED_KEY;
 std::string FORCE_COMPUTED_KEY;
+std::string INERTIAL_PARAMS_KEY;
 // - read:
 std::string JOINT_ANGLES_KEY;
 std::string JOINT_VELOCITIES_KEY;
@@ -110,6 +111,7 @@ int main() {
 		ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::angular_acc";
 		LINEAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::linear_acc";
 		LOCAL_GRAVITY_KEY = "sai2::DemoApplication::Panda::simulation::g_local";
+		INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::simulation::inertial_parameter";
 
 
 	}
@@ -556,6 +558,7 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 		redis_client.setEigenMatrixDerived(LINEAR_ACC_KEY, accel_local);
 		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
+		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
 
 
 		controller_counter++;

@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 2.8.12)
 project (demo_application)
 SET(CMAKE_CXX_FLAGS "-std=c++11")
-SET(CMAKE_BUILD_TYPE "Debug")
-# SET(CMAKE_BUILD_TYPE "Release")
+#SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_BUILD_TYPE "Release")
 
 # - eigen3
 set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
@@ -64,6 +64,9 @@ find_library(GLFW_LIBRARY glfw)
 # - hiredis
 find_library(HIREDIS_LIBRARY hiredis)
 
+
+
+
 # - jsoncpp
 if (CMAKE_SYSTEM_NAME MATCHES Darwin) 
 	find_library(JSONCPP_LIBRARY jsoncpp)
@@ -93,5 +96,5 @@ set(DEMO_APPLICATION_COMMON_LIBRARIES
 # add apps
 set (DEMO_APPLICATION_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
 
-add_subdirectory(00-kuka_joint_hold_pos)
+
 add_subdirectory(01-panda_force_control)
