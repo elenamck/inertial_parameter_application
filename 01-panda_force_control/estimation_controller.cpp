@@ -122,7 +122,7 @@ int main() {
 	bias.open("FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
-        std::cout << "Can't open Data!\n";
+        cout << "Can't open Data!" << endl;
     }
     else
     {
@@ -133,9 +133,10 @@ int main() {
     		bias >> value;
     		force_torque_bias(row) = value;
     	}
+    cout << "bias read" << force_torque_bias << endl;
     bias.close();
 	}
-    			
+    cout << "test" << endl;			
     // start redis client
 	auto redis_client = RedisClient();
 	redis_client.connect();
@@ -202,7 +203,7 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = M_PI/7.5;
 	joint_task->_kp = 41.0;
-	joint_task->_kv = 2.1 * sqrt(joint_task->_kp);
+	joint_task->_kv = 2.4 * sqrt(joint_task->_kp);
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
@@ -369,10 +370,10 @@ int main() {
 		}
 		t_start = std::chrono::high_resolution_clock::now();
 		A_data = GetDataMatrixFT(accel_local, avel_local, aaccel_local,  g_local);
-		computeInertial(n_measurements, -force_moment, A_data, phi,  Sigma);
+		computeInertial(n_measurements, force_moment, A_data, phi,  Sigma);
 		n_measurements++;
 		t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
-		cout << "Elapsed time Inertial Parameter Estimation: " << t_elapsed.count() << endl;
+		//cout << "Elapsed time Inertial Parameter Estimation: " << t_elapsed.count() << endl;
 
  	 	if(state == GOTO_INITIAL_CONFIG)
 		{	

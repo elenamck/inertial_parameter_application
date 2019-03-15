@@ -444,12 +444,10 @@ int main() {
 		if(state == DONE)
 		{
 			force_moment_average = force_moment_average/6;
-			std::cout << force_moment_average.transpose() << "\n";
+			std::cout << "calculated bias: " << force_moment_average.transpose() << "\n";
 
 			myfile << force_moment_average; 
 			myfile.close();	
-
-
 			break;
 
 		}
