@@ -4,6 +4,9 @@
 #include "Sai2Primitives.h"
 #include "filters/KalmanFilter.h"
 #include "filters/QuaternionBasedEKF.h"
+#include "parameter_estimation/RecursiveLeastSquare.h"
+#include "parameter_estimation/LeastSquare.h"
+
 
 
 #include <signal.h>
@@ -24,8 +27,8 @@ const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
-// const bool flag_simulation = true;
-const bool flag_simulation = false;
+const bool flag_simulation = true;
+// const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 // redis keys:
@@ -36,6 +39,7 @@ std::string ANGULAR_VEL_KEY;
 std::string ANGULAR_ACC_KEY;
 std::string LOCAL_GRAVITY_KEY;
 std::string INERTIAL_PARAMS_KEY;
+std::string LINEAR_VEL_KEY;
 
 // - read:
 std::string JOINT_ANGLES_KEY;
@@ -64,19 +68,6 @@ std::string POSITION_KEY;
 #define  MOVE 					 4
 #define  HAND_OVER 				 5
 
-/* Data Matrix Force/Torque virtual A_t based on 
- *"Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
- */
-Eigen::MatrixXd GetDataMatrixFT(Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local);
-/* Data Matrix Force/Torque virtual A_t based on 
- * "Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
-*/
-Eigen::MatrixXd computeSigma(Eigen::MatrixXd K, Eigen::MatrixXd Sigma, Eigen::MatrixXd A);
-Eigen::MatrixXd computeK(Eigen::MatrixXd Sigma, Eigen::MatrixXd A, Eigen::MatrixXd Lambda);
-
-void computeInertial(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd A, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma); 
-
-
 
 int main() {
 	if(flag_simulation)
@@ -91,6 +82,9 @@ int main() {
 		ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::sensors::aaccel";
 		LOCAL_GRAVITY_KEY =  "sai2::DemoApplication::simulation::Panda::g_local";
 		INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::simulation::inertial_parameter";
+		QUATERNION_KEY = "sai2::DemoApplication::simulation::Panda::controller::logging::quaternion";
+		POSITION_KEY = "sai2::DemoApplication::Panda::kinematics::pos";
+		LINEAR_VEL_KEY = "sai2::DemoApplication::Panda::kinematics::vel";
 
 	}
 	else
@@ -127,7 +121,7 @@ int main() {
     else
     {
     	
-    	for (int row ; row<6; row++)
+    	for (int row=0 ; row<6; row++)
     	{
     		double value = 0.0;
     		bias >> value;
@@ -212,19 +206,37 @@ int main() {
 	int state = GOTO_INITIAL_CONFIG;
 
 	//For Inertial Parameter Estimation
-	int n_measurements = 0;
-	Vector3d accel = Eigen::Vector3d::Zero(); //object linear acceleration in base frame
-	Vector3d avel = Eigen::Vector3d::Zero(); //object angular velocity in base frame
-	Vector3d aaccel = Eigen::Vector3d::Zero(); //object angular acceleration in base frame
-	Vector3d accel_local = Eigen::Vector3d::Zero(); // object linear acceleration in sensor frame
-	Vector3d aaccel_local = Eigen::Vector3d::Zero(); // object angular acceleration in sensor frame
-	Vector3d avel_local = Eigen::Vector3d::Zero(); //object angular velocity in sensor frame
-	Vector3d g_local = Eigen::Vector3d::Zero(); //gravity vector in sensor frame
-	MatrixXd A_data = Eigen::MatrixXd::Zero(6,10); //Data matrix
-	VectorXd phi = Eigen::VectorXd::Zero(10); //inertial parameter vector
-	MatrixXd Sigma = Eigen::MatrixXd::Zero(10,10);
-	Matrix3d inertia_tensor = Eigen::Matrix3d::Zero();
-	Vector3d center_of_mass = Eigen::Vector3d::Zero();
+	bool linear_case = true;
+	bool non_linear_case = false;
+	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
+	MatrixXd Lambda = 0.01 * MatrixXd::Identity(6,6);
+	auto LS = new LeastSquare(linear_case);
+	auto LS_2 = new LeastSquare(non_linear_case);
+
+	auto RLS = new RecursiveLeastSquare(linear_case,4,Lambda_lin);
+	auto RLS_2 = new RecursiveLeastSquare(non_linear_case,4,Lambda);
+
+
+	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame
+	Vector3d avel = Vector3d::Zero(); //object angular velocity in base frame
+	Vector3d aaccel = Vector3d::Zero(); //object angular acceleration in base frame
+	Vector3d accel_local = Vector3d::Zero(); // object linear acceleration in sensor frame
+	Vector3d aaccel_local = Vector3d::Zero(); // object angular acceleration in sensor frame
+	Vector3d avel_local = Vector3d::Zero(); //object angular velocity in sensor frame
+	Vector3d g_local = Vector3d::Zero(); //gravity vector in sensor frame
+	VectorXd phi_LS = VectorXd::Zero(10); //inertial parameter vector
+	VectorXd phi_RLS = VectorXd::Zero(10); //inertial parameter vector
+	VectorXd phi_lin_LS = VectorXd::Zero(4); //inertial parameter vector
+	VectorXd phi_lin_RLS = VectorXd::Zero(4); //inertial parameter vector
+	Vector3d force_sensed = Vector3d::Zero();
+	Matrix3d inertia_tensor_LS = Matrix3d::Zero();
+	Vector3d center_of_mass_LS = Vector3d::Zero();
+	Matrix3d inertia_tensor_RLS = Matrix3d::Zero();
+	Vector3d center_of_mass_RLS = Vector3d::Zero();
+
+	MatrixXd A_lin = MatrixXd::Zero(3,4);
+	MatrixXd A_full = MatrixXd::Zero(6,10);
+
 
 	//Kalman Filter
 	int n_kf = 9;
@@ -295,6 +307,7 @@ int main() {
 				    1,  0,  0,
 				    0,  1,  0;
 	Matrix3d R_link = Matrix3d::Zero();
+	Vector3d vel = Vector3d::Zero();
 
 	// create timer
 	std::chrono::high_resolution_clock::time_point t_start;
@@ -310,7 +323,7 @@ int main() {
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
-			
+		force_sensed << force_moment(0), force_moment(1), force_moment(2);	
 		robot->rotation(R_link,link_name); 
 		g_local = R_link.transpose()*robot->_world_gravity;
 		// update robot model
@@ -318,9 +331,15 @@ int main() {
 		{
 			robot->updateModel();
 			robot->coriolisForce(coriolis);
+			robot->position(current_position_aux, link_name, Vector3d::Zero());
+			robot->linearVelocity(vel, link_name, Vector3d::Zero());
 			robot->linearAcceleration(accel,link_name, Eigen::Vector3d::Zero());
 			robot->angularAcceleration(aaccel,link_name);
 			robot->angularVelocity(avel,link_name);
+			current_position_aux = R_link.transpose()*current_position_aux;
+			vel = R_link.transpose()*vel;
+			q_eff = R_link.transpose();
+			q_eff_aux << q_eff.w(), q_eff.vec();
 			accel_local = R_link.transpose()*accel;
 			accel_local += g_local;
 			aaccel_local = R_link.transpose()*aaccel;
@@ -359,7 +378,7 @@ int main() {
             q_eff = R_link.transpose();
 			q_eff_aux << q_eff.w(), q_eff.vec();
 
-			y_ekf << q_eff_aux, avel_local;
+			y_ekf << q_eff_aux, avel_aux;
 			extended_kalman_filter-> update(y_ekf);
 			ekf_states = extended_kalman_filter->state();
 			avel_local << ekf_states(4), ekf_states(5), ekf_states(6);
@@ -367,15 +386,28 @@ int main() {
 
 
 		}
-		t_start = std::chrono::high_resolution_clock::now();
-		A_data = GetDataMatrixFT(accel_local, avel_local, aaccel_local,  g_local);
-		computeInertial(n_measurements, -force_moment, A_data, phi,  Sigma);
-		n_measurements++;
-		t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
-		cout << "Elapsed time Inertial Parameter Estimation: " << t_elapsed.count() << endl;
 
+
+		LS->addData(force_sensed, accel_local, avel_local, aaccel_local, g_local);
+		RLS->addData(force_sensed, accel_local, avel_local, aaccel_local, g_local);
+
+		LS_2 ->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+		RLS_2 ->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+
+		// inertial_params_estimation->addMeasurement(force_sensed);
+		// inertial_params_estimation->update();
+		// inertial_params_estimation->getDataMatrix(A_full);
+		// std::cout << "A_full" << A_full << endl;
+		// std::cout << "force_moment" << force_moment.transpose() << endl;
+
+		// inertial_params_estimation->getDataMatrixLin(A_lin);
+		// std::cout << "A_lin" << A_lin << endl;
+		// std::cout << "force" << force_sensed.transpose() <<endl;
+
+		
  	 	if(state == GOTO_INITIAL_CONFIG)
 		{	
+
 			// update tasks models
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
@@ -393,7 +425,39 @@ int main() {
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				posori_task2->reInitializeTask();
 				posori_task2->enableVelocitySaturation(vel_sat, avel_sat);
-				state = MOVE_TO_OBJECT;
+				
+				// t_start = std::chrono::high_resolution_clock::now();
+
+
+				// t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
+				// cout << "Elapsed time Inertial Parameter Estimation: " << t_elapsed.count() << endl;
+				phi_lin_RLS = RLS->getInertialParameterVector();
+				center_of_mass_RLS << phi_lin_RLS(1)/phi_lin_RLS(0), phi_lin_RLS(2)/phi_lin_RLS(0), phi_lin_RLS(3)/phi_lin_RLS(0); 
+				std::cout << "estimated mass RLS \n" << phi_lin_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS \n" << 	center_of_mass_RLS.transpose() << "\n";
+
+			    phi_RLS = RLS_2->getInertialParameterVector();
+				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
+			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				
+
+				phi_lin_LS = LS->getInertialParameterVector();
+				center_of_mass_LS << phi_lin_LS(1)/phi_lin_LS(0), phi_lin_LS(2)/phi_lin_LS(0), phi_lin_LS(3)/phi_lin_LS(0); 
+			    std::cout << "estimated mass LS \n" << phi_lin_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+				
+				phi_LS = LS_2->getInertialParameterVector();
+				center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0);
+				inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+			    std::cout << "estimated mass LS \n" << phi_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+			    std::cout << "estimated Inertia LS \n" << inertia_tensor_LS << "\n";
+				
+
+			    state = MOVE_TO_OBJECT;
 				
 			}
 
@@ -426,7 +490,33 @@ int main() {
 					posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 					posori_task2->reInitializeTask();
 					posori_task2->enableVelocitySaturation(vel_sat, avel_sat);
-					state = MOVE_UP;				
+				
+				phi_lin_RLS = RLS->getInertialParameterVector();
+				center_of_mass_RLS << phi_lin_RLS(1)/phi_lin_RLS(0), phi_lin_RLS(2)/phi_lin_RLS(0), phi_lin_RLS(3)/phi_lin_RLS(0); 
+				std::cout << "estimated mass RLS \n" << phi_lin_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS \n" << 	center_of_mass_RLS.transpose() << "\n";
+
+			    phi_RLS = RLS_2->getInertialParameterVector();
+				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
+			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				
+
+				phi_lin_LS = LS->getInertialParameterVector();
+				center_of_mass_LS << phi_lin_LS(1)/phi_lin_LS(0), phi_lin_LS(2)/phi_lin_LS(0), phi_lin_LS(3)/phi_lin_LS(0); 
+			    std::cout << "estimated mass LS \n" << phi_lin_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+				
+				phi_LS = LS_2->getInertialParameterVector();
+				center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0);
+				inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+			    std::cout << "estimated mass LS \n" << phi_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+			    std::cout << "estimated Inertia LS \n" << inertia_tensor_LS << "\n";
+				
+				state = MOVE_UP;		
 			}
 
 		}
@@ -458,6 +548,32 @@ int main() {
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				posori_task2->reInitializeTask();
 				posori_task2->enableVelocitySaturation(vel_sat, avel_sat);
+
+				phi_lin_RLS = RLS->getInertialParameterVector();
+				center_of_mass_RLS << phi_lin_RLS(1)/phi_lin_RLS(0), phi_lin_RLS(2)/phi_lin_RLS(0), phi_lin_RLS(3)/phi_lin_RLS(0); 
+				std::cout << "estimated mass RLS \n" << phi_lin_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS \n" << 	center_of_mass_RLS.transpose() << "\n";
+
+			    phi_RLS = RLS_2->getInertialParameterVector();
+				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
+			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				
+
+				phi_lin_LS = LS->getInertialParameterVector();
+				center_of_mass_LS << phi_lin_LS(1)/phi_lin_LS(0), phi_lin_LS(2)/phi_lin_LS(0), phi_lin_LS(3)/phi_lin_LS(0); 
+			    std::cout << "estimated mass LS \n" << phi_lin_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+				
+				phi_LS = LS_2->getInertialParameterVector();
+				center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0);
+				inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+			    std::cout << "estimated mass LS \n" << phi_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+			    std::cout << "estimated Inertia LS \n" << inertia_tensor_LS << "\n";
+				
 				state = MOVE_DOWN;
 				
 			}
@@ -494,6 +610,32 @@ int main() {
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				posori_task2->reInitializeTask();
 				posori_task2->enableVelocitySaturation(vel_sat, avel_sat);
+				
+				phi_lin_RLS = RLS->getInertialParameterVector();
+				center_of_mass_RLS << phi_lin_RLS(1)/phi_lin_RLS(0), phi_lin_RLS(2)/phi_lin_RLS(0), phi_lin_RLS(3)/phi_lin_RLS(0); 
+				std::cout << "estimated mass RLS \n" << phi_lin_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS \n" << 	center_of_mass_RLS.transpose() << "\n";
+
+			    phi_RLS = RLS_2->getInertialParameterVector();
+				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
+			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				
+
+				phi_lin_LS = LS->getInertialParameterVector();
+				center_of_mass_LS << phi_lin_LS(1)/phi_lin_LS(0), phi_lin_LS(2)/phi_lin_LS(0), phi_lin_LS(3)/phi_lin_LS(0); 
+			    std::cout << "estimated mass LS \n" << phi_lin_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+				
+				phi_LS = LS_2->getInertialParameterVector();
+				center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0);
+				inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+			    std::cout << "estimated mass LS \n" << phi_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+			    std::cout << "estimated Inertia LS \n" << inertia_tensor_LS << "\n";
+				
 				state = MOVE;
 				
 			}
@@ -535,6 +677,32 @@ int main() {
 				posori_task2->reInitializeTask();
 				posori_task2->enableVelocitySaturation(vel_sat, avel_sat);
 				joint_task->_goal_position(5) += M_PI/2;
+
+				phi_lin_RLS = RLS->getInertialParameterVector();
+				center_of_mass_RLS << phi_lin_RLS(1)/phi_lin_RLS(0), phi_lin_RLS(2)/phi_lin_RLS(0), phi_lin_RLS(3)/phi_lin_RLS(0); 
+				std::cout << "estimated mass RLS \n" << phi_lin_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS \n" << 	center_of_mass_RLS.transpose() << "\n";
+
+			    phi_RLS = RLS_2->getInertialParameterVector();
+				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
+			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
+			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				
+
+				phi_lin_LS = LS->getInertialParameterVector();
+				center_of_mass_LS << phi_lin_LS(1)/phi_lin_LS(0), phi_lin_LS(2)/phi_lin_LS(0), phi_lin_LS(3)/phi_lin_LS(0); 
+			    std::cout << "estimated mass LS \n" << phi_lin_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+				
+				phi_LS = LS_2->getInertialParameterVector();
+				center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0);
+				inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+			    std::cout << "estimated mass LS \n" << phi_LS(0) << "\n";
+			    std::cout << "estimated center of mass \n" << 	center_of_mass_LS.transpose() << "\n";
+			    std::cout << "estimated Inertia LS \n" << inertia_tensor_LS << "\n";
+				
 				state = HAND_OVER;
 				
 			}
@@ -571,17 +739,19 @@ int main() {
 		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
 		redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
-		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
+		//redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
 
 		//offline processing
-		if(state !=GOTO_INITIAL_CONFIG)
-		{
+		//if(state !=GOTO_INITIAL_CONFIG)
+		//{
 			redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
 			redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
 			redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
 			redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
 			redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
-		}
+			redis_client.setEigenMatrixDerived(LINEAR_VEL_KEY, vel);	
+
+		//}
 
 
 
@@ -592,11 +762,11 @@ int main() {
 
     command_torques << 0,0,0,0,0,0,0;
     redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-    inertia_tensor << phi(4), phi(5), phi(6), phi(5), phi(7), phi(8), phi(6), phi(8), phi(9); 
-	center_of_mass << phi(1)/phi(0), phi(2)/phi(0), phi(3)/phi(0); 
-    std::cout << "estimated mass" << phi(0) << "\n";
-    std::cout << "estimated center of mass" << 	center_of_mass.transpose() << "\n";
-    std::cout << "estimated Inertia" << inertia_tensor << "\n";
+ //    //inertia_tensor << phi(4), phi(5), phi(6), phi(5), phi(7), phi(8), phi(6), phi(8), phi(9); 
+	// center_of_mass << phi_lin(1)/phi_lin(0), phi_lin(2)/phi_lin(0), phi_lin(3)/phi_lin(0); 
+ //    std::cout << "estimated mass" << phi_lin(0) << "\n";
+ //    std::cout << "estimated center of mass" << 	center_of_mass.transpose() << "\n";
+ //    //std::cout << "estimated Inertia" << inertia_tensor << "\n";
 
     double end_time = timer.elapsedTime();
     std::cout << "\n";
@@ -608,108 +778,9 @@ int main() {
 
 }
 
-// - Data Matrix A_t Full based on "Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008
-// - accel_local: object linear acceleration in sensor frame
-// - aaccel_local: object angular acceleration in sensor frame
-// - avel_local: object angular velocity in sensor frame
-// - g_local: gravity vector in sensor frame
-Eigen::MatrixXd GetDataMatrixFT(Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local)
-
-{
-		Eigen::MatrixXd A_t = Eigen::MatrixXd::Zero(6,10);
-		for (int i=0; i<3; i++)    
-			{
-				for (int j=4; j<10; j++)
-				{
-					A_t(i,j)= 0.0;
-				}	
-			}
-		for (int i=3; i<6; i++)
-			{
-				A_t(i,0)=0.0;
-			} 	  
-		A_t(3,1) = 0.0;
-		A_t(4,2) = 0.0;
-		A_t(5,3) = 0.0;	
-
-		for (int i=0; i<3; i++)
-			{
-				A_t(i,0) = accel_local(i)-g_local(i);
-			}
-
-		A_t(0,1) = - avel_local(1)*avel_local(1) - avel_local(2)*avel_local(2);
-		A_t(0,2) = avel_local(0)*avel_local(1) - aaccel_local(2);
-		A_t(0,3) = avel_local(0)*avel_local(2) + aaccel_local(1);
-
-		A_t(1,1) = avel_local(0)*avel_local(1) + aaccel_local(2);
-		A_t(1,2) = - avel_local(0)*avel_local(0) - avel_local(2)*avel_local(2);  
-		A_t(1,3) = avel_local(1)*avel_local(2) - aaccel_local(0);
-
-		A_t(2,1) = avel_local(0)*avel_local(2) - aaccel_local(1);
-		A_t(2,2) = avel_local(1)*avel_local(2) + aaccel_local(0);
-		A_t(2,3) = - avel_local(1)*avel_local(1)-avel_local(0)*avel_local(0);
-
-		A_t(3,2) = accel_local(2) - g_local(2);  
-		A_t(3,3) = g_local(1) - accel_local(1);
-		A_t(3,4) = aaccel_local(0);
-		A_t(3,5) = aaccel_local(1) - avel_local(0)*avel_local(2);
-		A_t(3,6) = aaccel_local(2) + avel_local(0)*avel_local(1);
-		A_t(3,7) = - avel_local(1)*avel_local(2);
-		A_t(3,8) = avel_local(1)*avel_local(1) - avel_local(2)*avel_local(2);
-		A_t(3,9) = avel_local(1)*avel_local(2);
-
-		A_t(4,1) = g_local(2) - accel_local(2);
-		A_t(4,3) = accel_local(0) - g_local(0);
-		A_t(4,4) = avel_local(0)*avel_local(2);
-		A_t(4,5) = aaccel_local(0) + avel_local(1)*avel_local(2);
-		A_t(4,6) = avel_local(2)*avel_local(2) - avel_local(0)*avel_local(0);
-		A_t(4,7) = aaccel_local(1);
-		A_t(4,8) = aaccel_local(2) - avel_local(0)*avel_local(1);
-		A_t(4,9) = - avel_local(0)*avel_local(2);
-
-		A_t(5,1) = accel_local(1) - g_local(1);
-		A_t(5,2) = g_local(0) - accel_local(0);
-		A_t(5,4) = - avel_local(0)*avel_local(1);
-		A_t(5,5) = avel_local(0)*avel_local(0) - avel_local(1)*avel_local(1);
-		A_t(5,6) = aaccel_local(0) - avel_local(1)*avel_local(2);
-		A_t(5,7) = avel_local(0)*avel_local(1);
-		A_t(5,8) = aaccel_local(1) + avel_local(0)*avel_local(2);	
-		A_t(5,9) = aaccel_local(2);	
-
-		return A_t;
-
-}
 
 
 
 
-Eigen::MatrixXd computeK(Eigen::MatrixXd Sigma, Eigen::MatrixXd A, Eigen::MatrixXd Lambda)
-{
-
-	Eigen::MatrixXd K = Sigma*A.transpose()*(A*Sigma*A.transpose()+ Lambda).inverse();
-
-	return K;
-}
-
-Eigen::MatrixXd computeSigma(Eigen::MatrixXd K, Eigen::MatrixXd Sigma, Eigen::MatrixXd A)
-{
-
-	Sigma = (Eigen::MatrixXd::Identity(10,10) - K*A)*Sigma;
-	return Sigma;
-}
 
 
-void computeInertial(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd A, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma)
-{
-	if (n_measurements == 0)
-	{
-		Sigma = Eigen::MatrixXd::Identity(10,10);
-	}
-	else
-	{
-		Eigen::MatrixXd Lambda = Eigen::MatrixXd::Identity(6, 6);
-		Eigen::MatrixXd K = computeK(Sigma, A, Lambda);
-		Sigma = computeSigma(K, Sigma, A);
-		phi = phi + K*(force_virtual - A*phi);
-	}
-}
