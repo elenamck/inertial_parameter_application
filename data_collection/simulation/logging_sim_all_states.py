@@ -32,6 +32,7 @@ name = "data_file"
 # open files
 # file = open(folder + '/' + name + '_' + timestamp,'w')
 file = open(folder + '/' + name + '_' + timestamp,'w')
+filename = name + '_' + timestamp
 
 # all kinematic variables in frame of last link
 file.write (' joint angles\t  joint velocities\t joint torques commanded\t position\t linear velocity \t linear acceleration \t quaternion \t angular velocity \t angular acceleration\t gravity  \n')
@@ -109,5 +110,6 @@ elapsed_time = time.time() - t_init
 print("Elapsed time : ", elapsed_time, " seconds")
 print("Loop cycles  : ", counter)
 print("Frequency    : ", counter/elapsed_time, " Hz")
+print("Filename     : ", filename)
 
 file.close()
