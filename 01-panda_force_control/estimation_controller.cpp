@@ -61,6 +61,10 @@ std::string EE_FORCE_SENSOR_KEY;
 std::string QUATERNION_KEY;
 std::string POSITION_KEY;
 
+std::string LINEAR_VEL_KF_KEY;
+std::string LINEAR_ACC_KIN_KEY;
+std::string LINEAR_VEL_KEY;
+
 #define  GOTO_INITIAL_CONFIG 	 0
 #define  MOVE_TO_OBJECT          1
 #define  MOVE_UP 				 2
@@ -106,6 +110,14 @@ int main() {
 		EE_FORCE_SENSOR_KEY ="sai2::DemoApplication::FrankaPanda::controller::force_moment";
 		QUATERNION_KEY = "sai2::DemoApplication::Panda::controller::quaternion";
 		POSITION_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos";
+
+		LINEAR_VEL_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::kinematics::vel";
+		LINEAR_ACC_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::KF::acceleration";
+		LINEAR_ACC_KIN_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::kinematics::accel";
+		ANGULAR_VEL_KEY = "sai2::DemoApplication::Panda::sensors::avel";
+		ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::sensors::aaccel";
+
+		LINEAR_VEL_KF_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::KF::velocity";
 		
 	}
 
@@ -116,7 +128,7 @@ int main() {
 	bias.open("FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
-        std::cout << "Can't open Data!\n";
+        cout << "Can't open Data!" << endl;
     }
     else
     {
@@ -127,9 +139,10 @@ int main() {
     		bias >> value;
     		force_torque_bias(row) = value;
     	}
+    cout << "bias read" << force_torque_bias << endl;
     bias.close();
 	}
-    			
+    cout << "test" << endl;			
     // start redis client
 	auto redis_client = RedisClient();
 	redis_client.connect();
@@ -196,7 +209,7 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = M_PI/7.5;
 	joint_task->_kp = 41.0;
-	joint_task->_kv = 2.1 * sqrt(joint_task->_kp);
+	joint_task->_kv = 2.4 * sqrt(joint_task->_kp);
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
@@ -262,10 +275,12 @@ int main() {
     C.block(0,3,3,6) = MatrixXd::Zero(3,6);
     C.block(3,0,3,6) = MatrixXd::Zero(3,6);
     C.block(3,6,3,3) = Matrix3d::Identity();
+//versuch weniger rauschen -> model mehr vertrauen -> 6 auf 7, 4 auf 5
 
-    Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-6, 1.0e-6, 1.0e-6, 1.0e-4, 1.0e-4, 1.0e-4;
-    R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-3, 1.0e-3, 1.0e-3;
+    Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-7, 1.0e-7, 1.0e-7, 1.0e-6, 1.0e-6, 1.0e-6;
+    R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-2, 1.0e-2, 1.0e-2;
     auto kalman_filter = new KalmanFilters::KalmanFilter(dt, A, C, Q, R, P);
+
     VectorXd x0 = VectorXd::Zero(n_kf);
     double t0 = 0;
     kalman_filter->init(t0, x0);
@@ -308,6 +323,10 @@ int main() {
 				    0,  1,  0;
 	Matrix3d R_link = Matrix3d::Zero();
 	Vector3d vel = Vector3d::Zero();
+
+	Vector3d kf_vel = Vector3d::Zero();
+	Vector3d accel_kin = Vector3d::Zero();
+
 
 	// create timer
 	std::chrono::high_resolution_clock::time_point t_start;
@@ -370,6 +389,7 @@ int main() {
             kalman_filter->update(y);
             kf_states = kalman_filter->state();
             accel_local << kf_states(6), kf_states(7), kf_states(8);
+            kf_vel << kf_states(3), kf_states(4), kf_states(5);
 
             avel_aux = redis_client.getEigenMatrixJSON(GYROSCOPE_DATA_KEY);
             avel_aux = R_acc_in_ft*avel_aux;
@@ -384,8 +404,14 @@ int main() {
 			avel_local << ekf_states(4), ekf_states(5), ekf_states(6);
 			aaccel_local << ekf_states(7), ekf_states(8), ekf_states(9);
 
+			robot->linearVelocity(vel, link_name, Vector3d(0,0,0));
+			vel = R_link.transpose()*vel;
+			robot->linearAcceleration(accel_kin, link_name, Vector3d(0,0,0));
+			accel_kin = R_link.transpose()*accel_kin;
+
 
 		}
+
 
 
 		LS->addData(force_sensed, accel_local, avel_local, aaccel_local, g_local);
@@ -739,22 +765,19 @@ int main() {
 		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
 		redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
-		//redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
 
-		//offline processing
-		//if(state !=GOTO_INITIAL_CONFIG)
-		//{
-			redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
-			redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
-			redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
-			redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
-			redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
-			redis_client.setEigenMatrixDerived(LINEAR_VEL_KEY, vel);	
-
-		//}
+		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
+		redis_client.setEigenMatrixDerived(LINEAR_VEL_KEY, vel);
+		redis_client.setEigenMatrixDerived(LINEAR_ACC_KIN_KEY, accel_kin);
+		redis_client.setEigenMatrixDerived(LINEAR_VEL_KF_KEY, kf_vel);
 
 
-
+		redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
+		redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
+		redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
+		redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
+		redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
+		
 
 		controller_counter++;
 

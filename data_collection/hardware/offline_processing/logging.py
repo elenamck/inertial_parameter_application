@@ -35,7 +35,7 @@ file = open(folder + '/' + name + '_' + timestamp,'w')
 filename = name + '_' + timestamp
 
 # all kinematic variables in frame of last link
-file.write (' accelerometer gravity removed\t  gyroscope\t force/torque sensor \n')
+file.write ('position\t  accelerometer gravity removed\t quaternion\t  gyroscope\t force/torque sensor \n')
 # open redis server
 r_server = redis.StrictRedis(host='localhost', port=6379, db=0)
 

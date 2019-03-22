@@ -33,7 +33,7 @@ name = "data_file"
 
 # open files
 file = open(folder + '/' + name + '_' + timestamp,'w')
-
+filename =  name + '_' + timestamp
 
 
 file.write (' position\t  linear vel\t linear acc\t kf position\t kf velocity\t kf acceleration \n')
@@ -53,15 +53,11 @@ r_server = redis.StrictRedis(host='localhost', port=6379, db=0)
 # ANGULAR_ACCELERATION_LOCAL_KEY = "sai2::DemoApplication::Panda::sensors::aaccel";
 
 ###############################HARDWARE####################################
-POSITION_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::kinematics::pos";
 LINEAR_VELOCITY_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::kinematics::vel";
-LINEAR_ACCELERATION_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::sensors::accel";
-ACCELEROMETER_DATA_KEY = "sai2::3spaceSensor::data::accelerometer";
-KALMAN_FILTER_POS_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::KF::position";
+LINEAR_ACC_KIN_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::kinematics::accel";
+LINEAR_ACCELERATION_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel";
 KALMAN_FILTER_VEL_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::KF::velocity";
 KALMAN_FILTER_ACC_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::KF::acceleration";
-LOCAL_GRAVITY_KEY =  "sai2::DemoApplication::FrankaPanda::Clyde::g_local";
-LINEAR_ACCELERATION_CORRECTED_RIGHT_FRAME_KEY ="sai2::DemoApplication::FrankaPanda::Clyde::linear_acceleration_corrected_right_frame";
 # ANGULAR_VELOCITY_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::sensors::avel";
 # ANGULAR_ACCELERATION_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::Clyde::sensors::aaccel";
 
@@ -78,28 +74,17 @@ print('Start Logging Data ... \n')
 while(runloop):
 	t += logger_period
 
-
-
-	pos = json.loads(r_server.get(POSITION_KEY).decode("utf-8"))
 	vel = json.loads(r_server.get(LINEAR_VELOCITY_KEY).decode("utf-8"))
-	acc = json.loads(r_server.get(LINEAR_ACCELERATION_LOCAL_KEY).decode("utf-8"))
-	kf_pos = json.loads(r_server.get(KALMAN_FILTER_POS_KEY).decode("utf-8"))
+	acc_sensed = json.loads(r_server.get(LINEAR_ACCELERATION_LOCAL_KEY).decode("utf-8"))
+	acc_kin = json.loads(r_server.get(LINEAR_ACC_KIN_KEY).decode("utf-8"))
 	kf_vel = json.loads(r_server.get(KALMAN_FILTER_VEL_KEY).decode("utf-8"))
 	kf_acc = json.loads(r_server.get(KALMAN_FILTER_ACC_KEY).decode("utf-8"))
-	acc_raw= json.loads(r_server.get(ACCELEROMETER_DATA_KEY).decode("utf-8"))
-	g_local = json.loads(r_server.get(LOCAL_GRAVITY_KEY).decode("utf-8"))
-	acc_g_rem = json.loads(r_server.get(LINEAR_ACCELERATION_CORRECTED_RIGHT_FRAME_KEY).decode("utf-8"))
-	#test = json.loads(r_server.get("test").decode("utf-8"))
 
-	line = " ".join([str(x) for x in pos]) + '\t' +\
-	" ".join([str(x) for x in vel]) + '\t' +\
-	" ".join([str(x) for x in acc]) + '\t' +\
-	" ".join([str(x) for x in kf_pos]) + '\t' +\
+	line = " ".join([str(x) for x in vel]) + '\t' +\
+	" ".join([str(x) for x in acc_sensed]) + '\t' +\
+	" ".join([str(x) for x in acc_kin]) + '\t' +\
 	" ".join([str(x) for x in kf_vel]) + '\t' +\
 	" ".join([str(x) for x in kf_acc]) + '\t' +\
-	" ".join([str(x) for x in acc_raw]) + '\t' +\
-	" ".join([str(x) for x in g_local]) + '\t' +\
-	" ".join([str(x) for x in acc_g_rem]) + '\t' +\
 	'\n'
 
 	file.write(line)
@@ -112,5 +97,6 @@ elapsed_time = time.time() - t_init
 print("Elapsed time : ", elapsed_time, " seconds")
 print("Loop cycles  : ", counter)
 print("Frequency    : ", counter/elapsed_time, " Hz")
+print("Filename     : ", filename)
 
 file.close()
