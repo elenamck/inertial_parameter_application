@@ -210,11 +210,11 @@ int main() {
 	bool non_linear_case = false;
 	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
 	MatrixXd Lambda = 0.01 * MatrixXd::Identity(6,6);
-	auto LS = new LeastSquare(linear_case);
-	auto LS_2 = new LeastSquare(non_linear_case);
+	auto LS = new ParameterEstimation::LeastSquare(linear_case);
+	auto LS_2 = new ParameterEstimation::LeastSquare(non_linear_case);
 
-	auto RLS = new RecursiveLeastSquare(linear_case,4,Lambda_lin);
-	auto RLS_2 = new RecursiveLeastSquare(non_linear_case,4,Lambda);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
+	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,4,Lambda);
 
 
 	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame
@@ -265,7 +265,7 @@ int main() {
 
     Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-6, 1.0e-6, 1.0e-6, 1.0e-4, 1.0e-4, 1.0e-4;
     R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-3, 1.0e-3, 1.0e-3;
-    auto kalman_filter = new KalmanFilter(dt, A, C, Q, R, P);
+    auto kalman_filter = new KalmanFilters::KalmanFilter(dt, A, C, Q, R, P);
     VectorXd x0 = VectorXd::Zero(n_kf);
     double t0 = 0;
     kalman_filter->init(t0, x0);
@@ -294,7 +294,7 @@ int main() {
   	R_ekf.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-12, 1e-1, 1e-1, 1e-1;
   	VectorXd y_ekf = VectorXd::Zero(m_ekf);
 
-  	auto extended_kalman_filter = new QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
+  	auto extended_kalman_filter = new KalmanFilters::QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
 
   	VectorXd x0_ekf = VectorXd::Zero(n_ekf);
   	extended_kalman_filter->init(t0, x0_ekf);

@@ -1,8 +1,10 @@
-#ifndef SAI2_COMMON_RECURSIVE_LEAST_SQUARE_H_
-#define SAI2_COMMON_RECURSIVE_LEAST_SQUARE_H_
+#ifndef PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_
+#define PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
+namespace ParameterEstimation 
+{
 class RecursiveLeastSquare	
 {
 public:
@@ -128,6 +130,6 @@ private:
 
 };
 
+} /* namespace ParameterEstimation */
 
-
-#endif //SAI2_COMMON_RECURSIVE_LEAST_SQUARE_H_ 
+#endif //PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_ 

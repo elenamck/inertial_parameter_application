@@ -1,7 +1,10 @@
-#ifndef SAI2_COMMON_LEAST_SQUARE_H
-#define SAI2_COMMON_LEAST_SQUARE_H
+#ifndef PARAMETER_ESTIMATION_LEAST_SQUARE_H
+#define PARAMETER_ESTIMATION_LEAST_SQUARE_H
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
+
+namespace ParameterEstimation
+{
 
 class LeastSquare	
 {
@@ -95,6 +98,6 @@ private:
 	bool _linear_case;				//flag for linear case
 };
 
+} /* namespace ParameterEstimation */
 
-
-#endif //SAI2_COMMON_LEAST_SQUARE_H 
+#endif //PARAMETER_ESTIMATION_LEAST_SQUARE_H 

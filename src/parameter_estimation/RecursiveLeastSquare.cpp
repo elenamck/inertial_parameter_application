@@ -3,6 +3,9 @@
 #include <iostream>
 #include <stdexcept>
 
+
+namespace ParameterEstimation
+{
 RecursiveLeastSquare::RecursiveLeastSquare(bool lin, int filter_size, const Eigen::MatrixXd& Lambda)
 {	
 	_accel_local.setZero();
@@ -324,6 +327,8 @@ Eigen::VectorXd RecursiveLeastSquare::getInertialParameterVector()
 		return _phi_lin;
 	}
 }
+
+}/* namespace ParameterEstimation */
 
 
 

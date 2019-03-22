@@ -5,21 +5,23 @@
 * Consequently, if measurment provides quaternions: convert them first!!!
 */
 
-#ifndef SAI2_COMMON_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
-#define SAI2_COMMON_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
+#ifndef KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
+#define KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
 
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
-class QuaternionBasedEKF2 {
+namespace KalmanFilters
+{
+class QuaternionBasedEKF {
 public:
 
 	/** 
 	* Empty default constructor
 	*/
-	QuaternionBasedEKF2();
+	QuaternionBasedEKF();
 	/**
 	Constructor for Extended Kalman filter with the following parameters:
 	*	dt 		  - time step
@@ -31,7 +33,7 @@ public:
 	*	R 		  - measurement noise covariance matrix
 	*	P  		  - error covariance matrix
 	*/ 
-	QuaternionBasedEKF2(
+	QuaternionBasedEKF(
 		double dt,
 		const Eigen::MatrixXd& C,
 		const Eigen::MatrixXd& Q,
@@ -145,5 +147,6 @@ private:
 
 
 };
+} /* namespace KalmanFilters */
 
-#endif //SAI2_COMMON_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
+#endif //KALMAN_FILTERS_EXTENDED_KALMAN_FILTER_H_

@@ -1,8 +1,17 @@
 cmake_minimum_required (VERSION 2.8.12)
-project (demo_application)
+project (INERTIAL_PARAMERTER_APP)
 SET(CMAKE_CXX_FLAGS "-std=c++11")
 SET(CMAKE_BUILD_TYPE "Debug")
-#SET(CMAKE_BUILD_TYPE "Release")
+# SET(CMAKE_BUILD_TYPE "Release")
+
+# set(INERTIAL_PARAMERTER_APP_COMMON_SOURCE ${PROJECT_SOURCE_DIR}/src/filters/ExtendedKalmanFilter.cpp
+# 	${PROJECT_SOURCE_DIR}/src/filters/KalmanFilter.cpp
+# 	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF.cpp
+# 	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF2.cpp
+# 	${PROJECT_SOURCE_DIR}/src/parameter_estimation/RecursiveLeastSquare.cpp
+# 	${PROJECT_SOURCE_DIR}/src/parameter_estimation/LeastSquare.cpp
+# 	)
+
 
 # - eigen3
 set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
@@ -13,7 +22,36 @@ if(NOT EIGEN3_INCLUDE_DIR)
 		set(EIGEN3_INCLUDE_DIR /usr/include/eigen3)
 	endif()
 endif()
-include_directories(${EIGEN3_INCLUDE_DIR})
+
+# add inertial parameter estimation
+SET(PARAMETER_ESTIMATION_SOURCE
+ 	${PROJECT_SOURCE_DIR}/src/parameter_estimation/RecursiveLeastSquare.cpp
+ 	${PROJECT_SOURCE_DIR}/src/parameter_estimation/LeastSquare.cpp
+	)
+
+# add filters
+SET(FILTERS_SOURCE
+	${PROJECT_SOURCE_DIR}/src/filters/ExtendedKalmanFilter.cpp
+ 	${PROJECT_SOURCE_DIR}/src/filters/KalmanFilter.cpp
+ 	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF.cpp
+ 	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF2.cpp
+	)
+# add header files 
+SET(INERTIAL_PARAMETER_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
+
+
+INCLUDE_DIRECTORIES(${INERTIAL_PARAMETER_INCLUDE_DIRS}
+	${EIGEN3_INCLUDE_DIR} 
+	)
+#create library
+ADD_LIBRARY (inertial_parameter_app STATIC
+	${PARAMETER_ESTIMATION_SOURCE}
+	${FILTERS_SOURCE}
+	)
+
+set(INERTIAL_PARAMETER_LIBRARIES
+	inertial_parameter_app
+	)
 
 # set common dependencies
 # - CHAI3D
@@ -80,7 +118,7 @@ endif ()
 
 
 # set common dependencies
-set(DEMO_APPLICATION_COMMON_LIBRARIES
+set(INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES
 	${CHAI3D_LIBARIES}
 	${SAI2-COMMON_LIBRARIES}
 	${SAI2-MODEL_LIBRARIES}
@@ -94,7 +132,7 @@ set(DEMO_APPLICATION_COMMON_LIBRARIES
 	)
 
 # add apps
-set (DEMO_APPLICATION_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
+set (INERTIAL_PARAMERTER_APP_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
 
 
 add_subdirectory(01-panda_force_control)
