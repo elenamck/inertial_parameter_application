@@ -9,6 +9,8 @@ Tools for inertial parameter estimation on FrankaEmika Panda arm.
 * data_collection: plotting and logging scripts for redis-keys
 * robot_models: includes models for FrankaEmika Panda arm and Kuka iiwa arm
 * src: source and header files for inertial parameter application
+** filters: implementations Kalman Filter, Extended Kalman filter for kinematic variables
+** parameter_estimation: implementations of different estimation algorithms
 
 
 
