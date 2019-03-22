@@ -4,6 +4,9 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${INERTIAL_PARAMERTER_APP_BINARY_DIR}/01-pan
 # add the include directory to the include paths
 INCLUDE_DIRECTORIES (
 	${INERTIAL_PARAMETER_INCLUDE_DIRS})
+
+ADD_EXECUTABLE (estimation_controller_debugging estimation_controller_debugging.cpp)
+
 	
 #template controller
 ADD_EXECUTABLE (template_controller template_controller.cpp)
@@ -34,6 +37,7 @@ ADD_EXECUTABLE (trajectory_testing trajectory_testing.cpp)
 # and link the library against the executable
 TARGET_LINK_LIBRARIES (kf_tuning ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 
+TARGET_LINK_LIBRARIES (estimation_controller_debugging ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 
 TARGET_LINK_LIBRARIES (trajectory_testing ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 TARGET_LINK_LIBRARIES (estimation_controller ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
