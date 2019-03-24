@@ -32,29 +32,25 @@ name = "data_file"
 # open files
 # file = open(folder + '/' + name + '_' + timestamp,'w')
 file = open(folder + '/' + name + '_' + timestamp,'w')
-filename = name + '_' + timestamp,'w'
+filename = name + '_' + timestamp
 # all kinematic variables in frame of last link
-file.write (' accel\t  avel\t aaccel\t g_local\t force virtual\t phi \n')
+file.write ('pos\t vel\t accel\t ori(matrix)\t avel\t aaccel\t force \t phi RLS\t phi LS \t phi debug \n')
 # open redis server
 r_server = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 # redis keys
-LINEAR_ACC_KEY = "sai2::DemoApplication::Panda::sensors::accel";
-ANGULAR_VEL_KEY = "sai2::DemoApplication::Panda::sensors::avel";
-ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::sensors::aaccel";
-LOCAL_GRAVITY_KEY =  "sai2::DemoApplication::simulation::Panda::g_local";
-FORCE_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
-INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::simulation::inertial_parameter";
-## joint space
-# LINEAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::linear_acc";
-# ANGULAR_VEL_KEY = "sai2::DemoApplication::Panda::simulation::angular_vel";
-# ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::angular_acc";
-# LOCAL_GRAVITY_KEY = "sai2::DemoApplication::Panda::simulation::g_local";
-# FORCE_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
-# INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::simulation::inertial_parameter";
+POSITION_KEY = "sai2::DemoApplication::Panda::kinematics::pos";
+LINEAR_VEL_KIN_KEY = "sai2::DemoApplication::Panda::kinematics::vel";
+LINEAR_ACC_KIN_KEY = "sai2::DemoApplication::Panda::kinematics::accel";
+ORIENTATION_QUATERNION_KEY =  "sai2::DemoApplication::Panda::kinematics::ori::quats";
+ANGULAR_VEL_KIN_KEY = "sai2::DemoApplication::Panda::kinematics::avel";
+ANGULAR_ACC_KIN_KEY = "sai2::DemoApplication::Panda::kinematics::aaccel";
 
+EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
 
-
+INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::controller::phi";
+INERTIAL_PARAMS_LS_KEY = "sai2::DemoApplication::Panda::controller::phiLS";
+INERTIAL_PARAMS_DEBUG_KEY = "sai2::DemoApplication::Panda::controller::phidebug";
 
 # data logging frequency
 logger_frequency = 1000.0  # Hz
@@ -65,31 +61,37 @@ t = t_init
 print('Start Logging Data ... \n')
 
 while(runloop):
-	t += logger_period
+    t += logger_period
 
+    pos       = json.loads(r_server.get(POSITION_KEY).decode("utf-8"))
+    vel       = json.loads(r_server.get(LINEAR_VEL_KIN_KEY).decode("utf-8"))
+    accel     = json.loads(r_server.get(LINEAR_ACC_KIN_KEY).decode("utf-8"))
+    ori_quat  = json.loads(r_server.get(ORIENTATION_QUATERNION_KEY).decode("utf-8"))
+    avel      = json.loads(r_server.get(ANGULAR_VEL_KIN_KEY).decode("utf-8"))
+    aaccel    = json.loads(r_server.get(ANGULAR_ACC_KIN_KEY).decode("utf-8"))
+    force_v   = json.loads(r_server.get(EE_FORCE_SENSOR_FORCE_KEY).decode("utf-8"))
+    phi_RLS   = json.loads(r_server.get(INERTIAL_PARAMS_KEY).decode("utf-8"))
+    #phi_LS    = json.loads(r_server.get(INERTIAL_PARAMS_LS_KEY).decode("utf-8"))
+    #phi_aux   = json.loads(r_server.get(INERTIAL_PARAMS_DEBUG_KEY).decode("utf-8"))
 
+    line = " ".join([str(x) for x in pos]) + '\t' +\
+    " ".join([str(x) for x in vel]) + '\t' +\
+    " ".join([str(x) for x in accel]) + '\t' +\
+    " ".join([str(x) for x in ori_quat]) + '\t' +\
+    " ".join([str(x) for x in avel]) + '\t' +\
+    " ".join([str(x) for x in aaccel]) + '\t' +\
+    " ".join([str(x) for x in force_v]) + '\t' +\
+    " ".join([str(x) for x in phi_RLS]) + '\t' +\
+    '\n'
+    # " ".join([str(x) for x in phi_LS]) + '\t' +\
+    # " ".join([str(x) for x in phi_aux]) + '\t' +\
+    # '\n'
 
+    file.write(line)
 
-	accel   = json.loads(r_server.get(LINEAR_ACC_KEY).decode("utf-8"))
-	avel    = json.loads(r_server.get(ANGULAR_VEL_KEY).decode("utf-8"))
-	aaccel  = json.loads(r_server.get(ANGULAR_ACC_KEY).decode("utf-8"))
-	g_local = json.loads(r_server.get(LOCAL_GRAVITY_KEY).decode("utf-8"))
-	force_v = json.loads(r_server.get(FORCE_VIRTUAL_KEY).decode("utf-8"))
-	phi     = json.loads(r_server.get(INERTIAL_PARAMS_KEY).decode("utf-8"))
+    counter = counter + 1
 
-	line = " ".join([str(x) for x in accel]) + '\t' +\
-	" ".join([str(x) for x in avel]) + '\t' +\
-	" ".join([str(x) for x in aaccel]) + '\t' +\
-	" ".join([str(x) for x in g_local]) + '\t' +\
-	" ".join([str(x) for x in force_v]) + '\t' +\
-	" ".join([str(x) for x in phi]) + '\t' +\
-	'\n'
-
-	file.write(line)
-
-	counter = counter + 1
-
-	time.sleep(max(0.0,t-time.time()))
+    time.sleep(max(0.0,t-time.time()))
 
 elapsed_time = time.time() - t_init
 print("Elapsed time : ", elapsed_time, " seconds")
