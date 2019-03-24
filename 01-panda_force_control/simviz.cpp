@@ -283,10 +283,10 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 	//-----FT sensor (panda_arm_FT_sensor.urdf)------
 	Eigen::VectorXd force_virtual = Eigen::VectorXd::Zero(6);
 	double k_f = 1e5;
-	double d_f = 300;
+	double d_f = 350;
 	double k_i = 15.0;
 	double k_t = 1e5;
-	double d_t = 300; 
+	double d_t = 350; 
 	double F_x = 0;
 	double F_y = 0;
 	double F_z = 0;
@@ -378,7 +378,7 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 		T_1.translation() << robot->_q(7), robot->_q(8), robot->_q(9);
 		Eigen::Vector3d F_aux = Eigen::Vector3d::Zero();
 		F_aux << F_x, F_y, F_z; 
-		F_aux = T_1*F_aux;
+		//F_aux = T_1*F_aux;
 		Tau_x =  - k_t * robot->_q(10) - d_t * robot->_dq(10) - k_i * integrated_pos_error(3);
 		Tau_y =  - k_t * robot->_q(11) - d_t * robot->_dq(11) - k_i * integrated_pos_error(4);
 		Tau_z =  - k_t * robot->_q(12) - d_t * robot->_dq(12) - k_i * integrated_pos_error(5);
