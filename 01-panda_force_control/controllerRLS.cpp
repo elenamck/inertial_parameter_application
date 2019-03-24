@@ -224,8 +224,12 @@ int main() {
 	Eigen::Vector3d initial_position = Eigen::Vector3d::Zero();
 	Eigen::Matrix3d initial_orientation = Eigen::Matrix3d::Zero();
 	Eigen::Affine3d T;
-	robot->rotation(initial_orientation, posori_task->_link_name);
-	robot->position(initial_position, posori_task->_link_name, pos_in_link);
+	robot->rotation(initial_orientation, posori_task2->_link_name);
+	cout << "initial_orientation: \n" << initial_orientation << endl;
+	robot->position(initial_position, posori_task2->_link_name, pos_in_link);
+	cout << "initial_position: \n" << initial_position.transpose() << endl;
+
+
 
 	VectorXd posori_task_torques = VectorXd::Zero(dof);
 
@@ -339,8 +343,6 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 
 		if(state == PARAMETER_ESTIMATION)
 		{
-
-		robot->updateModel();
 		robot->position(current_position, link_name, pos_in_link);
 
 		N_prec.setIdentity();
@@ -350,6 +352,10 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 		double circle_radius = 0.00002*n;
 		double circle_freq = 0.25;
 		double time = controller_counter/control_freq;
+		cout << "controller_counter: \n" << controller_counter << endl;
+		cout << "time: \n" << time << endl;
+
+
 
 		if(controller_counter<8000)
 		{
@@ -359,8 +365,14 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 			 	      0     , 1 ,     0     ,
 			     -sin(theta) , 0 , cos(theta);
 			posori_task2->_desired_position = initial_position + circle_radius * Eigen::Vector3d(0.0, sin(2*M_PI*circle_freq*time), cos(2*M_PI*circle_freq*time));
+			cout << "desired_position: \n" <<  posori_task2->_desired_position.transpose() << endl;
+
 			posori_task2->_desired_velocity = 2*M_PI*circle_freq*circle_radius*Eigen::Vector3d(0.0, cos(2*M_PI*circle_freq*time), -sin(2*M_PI*circle_freq*time));
+			cout << "_desired_velocity: \n" <<  posori_task2->_desired_velocity.transpose() << endl;
+			
 			posori_task2->_desired_orientation = R.transpose()*initial_orientation;
+			cout << "desired_orientation: \n" <<  posori_task2->_desired_orientation << endl;
+
 			n++;
 		}
 		else if(controller_counter < 16000)
@@ -413,6 +425,8 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 		posori_task2->computeTorques(posori_task2_torques);
 
 		command_torques = posori_task2_torques + coriolis;
+		cout << "command_torques: \n" << command_torques.transpose() << endl;
+
 
 		A = GetDataMatrixFT(accel_local, avel_local, aaccel_local,  g_local);
 
@@ -421,7 +435,7 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
  		n_measurements++;
 
 
-		if(controller_counter ==30000 )
+		if(controller_counter ==30000)
 			{
 				posori_task2->reInitializeTask();
 				posori_task->_goal_position(2) -= 0.2;
