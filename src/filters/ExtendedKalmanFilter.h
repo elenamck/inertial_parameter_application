@@ -1,36 +1,36 @@
-#ifndef SAI2_COMMON_KALMAN_FILTER_H_
-#define SAI2_COMMON_KALMAN_FILTER_H_
+#ifndef EXTENDED_KALMAN_FILTER_H_
+#define EXTENDED_KALMAN_FILTER_H_
 
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
-class KalmanFilter {
-public: 
+class ExtendedKalmanFilter {
+public:
 
 	/** 
 	* Empty default constructor
 	*/
-	KalmanFilter();
-
+	ExtendedKalmanFilter();
 	/**
-	Constructor Kalman filter with the following matrices:
-	* 	A - dynamics matrix
-	*	C - output matrix
+	Constructor for Extended Kalman filter with the following parameters:
+	*	f - nonlinear systems dynamics function
+	*	F - Jacobian of the nonlinear systems dynamics function, evaluated at the current state
+	*	C - Output martrix (assumption: constant matrix)
 	*	Q - process noise covariance matrix
 	*	R - measurement noise covariance matrix
 	*	P - error covariance matrix
-	*/
-	KalmanFilter(
+	*/ 
+	ExtendedKalmanFilter(
 		double dt,
-		const Eigen::MatrixXd& A,
+		const Eigen::VectorXd& f,
+		const Eigen::MatrixXd& F,
 		const Eigen::MatrixXd& C,
 		const Eigen::MatrixXd& Q,
 		const Eigen::MatrixXd& R,
 		const Eigen::MatrixXd& P
 		);
-
 
 	/** 
 	* Initialize filter with initial states as zero
@@ -50,21 +50,24 @@ public:
 
 	/** 
 	* update estimated state based on measured values
-	* using the given time step and dynamics matrix
+	* using the given time step, nonlinear systems dynamics function and Jacobian of the nonlinear systems dynamic function
 	*/ 
-	void update(const Eigen::VectorXd& y, double dt, const Eigen::MatrixXd A);
+	void update(const Eigen::VectorXd& y, double dt, const Eigen::VectorXd f, const Eigen::MatrixXd F);
 
 	/**
 	* return current state and time
 	*/
 	Eigen::VectorXd state();
-	
-	double time();
 
+	double time();
+	
 private:
+	//nonlinear systems dynamics function
+	Eigen::VectorXd f;
 
 	//Matrices for computation - with Kalman gain K and initial error covariance matrix P0
-	Eigen::MatrixXd A, C, Q, R, P, K, P0;
+	Eigen::MatrixXd F, C, Q, R, P, K, P0;
+
 
 	//System dimensions
 	int m, n;
@@ -85,6 +88,7 @@ private:
 	Eigen::VectorXd x_hat, x_hat_new;
 
 
+
 };
 
-#endif //SAI2_COMMON_KALMAN_FILTER_H_
+#endif //EXTENDED_KALMAN_FILTER_H_

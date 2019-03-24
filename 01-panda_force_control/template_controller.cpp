@@ -20,8 +20,8 @@ const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
-const bool flag_simulation = true;
-// const bool flag_simulation = false;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 // redis keys:
@@ -97,6 +97,7 @@ int main() {
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 
+	Vector3d position = Vector3d::Zero();
 	int dof = robot->dof();
 	VectorXd command_torques = VectorXd::Zero(dof);
 	VectorXd coriolis = VectorXd::Zero(dof);
@@ -144,7 +145,6 @@ int main() {
 
 			coriolis = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
 		}
-
 
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);

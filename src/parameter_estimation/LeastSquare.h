@@ -1,7 +1,7 @@
-#ifndef SAI2_COMMON_LEAST_SQUARE_H
-#define SAI2_COMMON_LEAST_SQUARE_H
+#ifndef LEAST_SQUARE_H
+#define LEAST_SQUARE_H
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 class LeastSquare	
 {
@@ -97,4 +97,4 @@ private:
 
 
 
-#endif //SAI2_COMMON_LEAST_SQUARE_H 
+#endif //LEAST_SQUARE_H 

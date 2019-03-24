@@ -1,3 +1,6 @@
+
+#ifndef QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
+#define QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
 /**************ATTENTION****************/
 /*
 * Quaternions in Eigen: q = (q_vec q_const)
@@ -5,13 +8,11 @@
 * Consequently, if measurment provides quaternions: convert them first!!!
 */
 
-#ifndef SAI2_COMMON_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
-#define SAI2_COMMON_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
 
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 class QuaternionBasedEKF {
 public:
@@ -146,4 +147,4 @@ private:
 
 };
 
-#endif //SAI2_COMMON_EXTENDED_KALMAN_FILTER_H_
+#endif //EXTENDED_KALMAN_FILTER_H_

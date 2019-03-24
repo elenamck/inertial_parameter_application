@@ -1,7 +1,7 @@
-#ifndef SAI2_COMMON_RECURSIVE_LEAST_SQUARE_H_
-#define SAI2_COMMON_RECURSIVE_LEAST_SQUARE_H_
+#ifndef RECURSIVE_LEAST_SQUARE_H_
+#define RECURSIVE_LEAST_SQUARE_H_
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 class RecursiveLeastSquare	
 {
@@ -130,4 +130,4 @@ private:
 
 
 
-#endif //SAI2_COMMON_RECURSIVE_LEAST_SQUARE_H_ 
+#endif //RECURSIVE_LEAST_SQUARE_H_ 
