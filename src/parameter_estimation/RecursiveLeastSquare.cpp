@@ -80,15 +80,43 @@ void RecursiveLeastSquare::updateData()
 			_A.resize(_n_measurements*6, 10);
 			_FT.resize(_n_measurements*6);
 
-			_A.topRows((_n_measurements-1)*6) = A_temp;
-			_FT.topRows((_n_measurements-1)*6) = FT_temp;
+			_A.bottomRows((_n_measurements-1)*6) = A_temp;
+			_FT.bottomRows((_n_measurements-1)*6) = FT_temp;
 
-			_A.bottomRows(6) = _A_curr;
-			_FT.bottomRows(6) = _ft;
+			_A.topRows(6) = _A_curr;
+			_FT.topRows(6) = _ft;
+			// Eigen::MatrixXd A_temp = _A;
+			// Eigen::VectorXd FT_temp = _FT;
+
+			// _A.resize(_n_measurements*6, 10);
+			// _FT.resize(_n_measurements*6);
+
+			// _A.topRows((_n_measurements-1)*6) = A_temp;
+			// _FT.topRows((_n_measurements-1)*6) = FT_temp;
+
+			// _A.bottomRows(6) = _A_curr;
+			// _FT.bottomRows(6) = _ft;
 		}
 		else if (_n_measurements > _filter_size)
 		{
-			std::cout << "error in adding measurement" << _n_measurements << std::endl;
+			Eigen::MatrixXd A_temp = _A.topRows((_filter_size-1)*6);
+			Eigen::VectorXd FT_temp = _FT.topRows((_filter_size-1)*6);
+
+
+			_A.bottomRows((_filter_size-1)*6) = A_temp;
+			_FT.bottomRows((_filter_size-1)*6) = FT_temp;
+
+			_A.topRows(6) = _A_curr;
+			_FT.topRows(6) = _ft; 
+
+			// Eigen::MatrixXd A_temp = _A.bottomRows((_filter_size-1)*6);
+			// Eigen::VectorXd FT_temp = _FT.bottomRows((_filter_size-1)*6);
+
+			// _A.bottomRows(6) = _A_curr;
+			// _FT.bottomRows(6) = _ft; 
+
+			// _A.topRows((_filter_size-1)*6) = A_temp;
+			// _FT.topRows((_filter_size-1)*6) = FT_temp;
 		}
 	}
 	else
@@ -140,17 +168,12 @@ void RecursiveLeastSquare::updateParameters()
 			}
 
 		}
-		else if (_n_measurements ==_filter_size)
+		else if (_n_measurements >=_filter_size)
 		{
-			_K = computeK();
-			_Sigma =computeSigma();
+			_K = _Sigma*_A.transpose()*(_A*_Sigma*_A.transpose()+ _Lambda_filt).inverse();
+			_Sigma = (Eigen::MatrixXd::Identity(10,10) - _K*_A)*_Sigma;
 			_phi = _phi + _K*(_FT - _A*_phi);
 			
-			_n_measurements = 0;
-			_A.setZero(6*_filter_size,10);
-			_FT.setZero(6*_filter_size);
-			_A.resize(6,10);
-			_FT.resize(6);
 		}
 	}
 	else
@@ -325,6 +348,29 @@ Eigen::VectorXd RecursiveLeastSquare::getInertialParameterVector()
 	else
 	{
 		return _phi_lin;
+	}
+}
+
+Eigen::MatrixXd RecursiveLeastSquare::getCurrentDataMatrix()
+{
+	if(_linear_case==false)
+	{
+		return _A;
+	}
+	else
+	{
+		return _A_lin;
+	}
+}
+Eigen::VectorXd RecursiveLeastSquare::getCurrentInputVector()
+{
+	if(_linear_case==false)
+	{
+		return _FT;
+	}
+	else
+	{
+		return _F;
 	}
 }
 
