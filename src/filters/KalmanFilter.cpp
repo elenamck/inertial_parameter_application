@@ -3,6 +3,9 @@
 
 #include "KalmanFilter.h"
 
+namespace KalmanFilters
+{
+
 KalmanFilter::KalmanFilter() {}
 
 KalmanFilter::KalmanFilter(
@@ -70,3 +73,4 @@ double KalmanFilter::time()
 {
 	return t;
 }
+} /* namespace KalmanFilters */

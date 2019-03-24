@@ -1,8 +1,11 @@
-#ifndef RECURSIVE_LEAST_SQUARE_H_
-#define RECURSIVE_LEAST_SQUARE_H_
+
+#ifndef PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_
+#define PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_
 
 #include <eigen3/Eigen/Dense>
 
+namespace ParameterEstimation 
+{
 class RecursiveLeastSquare	
 {
 public:
@@ -92,7 +95,9 @@ public:
 	Eigen::Vector3d computeContactForce(const Eigen::Vector3d& force_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
 
 	Eigen::VectorXd computeContactForceTorque(const Eigen::VectorXd& force_torque_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
-
+	
+	Eigen::MatrixXd getCurrentDataMatrix();
+	Eigen::VectorXd getCurrentInputVector();
 
 
 private:
@@ -128,6 +133,7 @@ private:
 
 };
 
+} /* namespace ParameterEstimation */
 
 
-#endif //RECURSIVE_LEAST_SQUARE_H_ 
+#endif //PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_ 

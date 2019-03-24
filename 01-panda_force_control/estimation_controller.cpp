@@ -57,6 +57,10 @@ std::string EE_FORCE_SENSOR_KEY;
 std::string QUATERNION_KEY;
 std::string POSITION_KEY;
 
+
+std::string LINEAR_VEL_KF_KEY;
+std::string LINEAR_ACC_KIN_KEY;
+
 #define  GOTO_INITIAL_CONFIG 	 0
 #define  MOVE_TO_OBJECT          1
 #define  MOVE_UP 				 2
@@ -213,19 +217,39 @@ int main() {
 	int state = GOTO_INITIAL_CONFIG;
 
 	//For Inertial Parameter Estimation
-	int n_measurements = 0;
-	Vector3d accel = Eigen::Vector3d::Zero(); //object linear acceleration in base frame
-	Vector3d avel = Eigen::Vector3d::Zero(); //object angular velocity in base frame
-	Vector3d aaccel = Eigen::Vector3d::Zero(); //object angular acceleration in base frame
-	Vector3d accel_local = Eigen::Vector3d::Zero(); // object linear acceleration in sensor frame
-	Vector3d aaccel_local = Eigen::Vector3d::Zero(); // object angular acceleration in sensor frame
-	Vector3d avel_local = Eigen::Vector3d::Zero(); //object angular velocity in sensor frame
-	Vector3d g_local = Eigen::Vector3d::Zero(); //gravity vector in sensor frame
-	MatrixXd A_data = Eigen::MatrixXd::Zero(6,10); //Data matrix
-	VectorXd phi = Eigen::VectorXd::Zero(10); //inertial parameter vector
-	MatrixXd Sigma = Eigen::MatrixXd::Zero(10,10);
-	Matrix3d inertia_tensor = Eigen::Matrix3d::Zero();
-	Vector3d center_of_mass = Eigen::Vector3d::Zero();
+
+	bool linear_case = true;
+	bool non_linear_case = false;
+	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
+	MatrixXd Lambda = 0.01 * MatrixXd::Identity(6,6);
+	auto LS = new ParameterEstimation::LeastSquare(linear_case);
+	auto LS_2 = new ParameterEstimation::LeastSquare(non_linear_case);
+
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
+	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,4,Lambda);
+
+
+	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame
+	Vector3d avel = Vector3d::Zero(); //object angular velocity in base frame
+	Vector3d aaccel = Vector3d::Zero(); //object angular acceleration in base frame
+	Vector3d accel_local = Vector3d::Zero(); // object linear acceleration in sensor frame
+	Vector3d aaccel_local = Vector3d::Zero(); // object angular acceleration in sensor frame
+	Vector3d avel_local = Vector3d::Zero(); //object angular velocity in sensor frame
+	Vector3d g_local = Vector3d::Zero(); //gravity vector in sensor frame
+	VectorXd phi_LS = VectorXd::Zero(10); //inertial parameter vector
+	VectorXd phi_RLS = VectorXd::Zero(10); //inertial parameter vector
+	VectorXd phi_lin_LS = VectorXd::Zero(4); //inertial parameter vector
+	VectorXd phi_lin_RLS = VectorXd::Zero(4); //inertial parameter vector
+	Vector3d force_sensed = Vector3d::Zero();
+	Matrix3d inertia_tensor_LS = Matrix3d::Zero();
+	Vector3d center_of_mass_LS = Vector3d::Zero();
+	Matrix3d inertia_tensor_RLS = Matrix3d::Zero();
+	Vector3d center_of_mass_RLS = Vector3d::Zero();
+
+	MatrixXd A_lin = MatrixXd::Zero(3,4);
+	MatrixXd A_full = MatrixXd::Zero(6,10);
+
+
 
 	//Kalman Filter
 	int n_kf = 9;
@@ -252,9 +276,14 @@ int main() {
     C.block(3,0,3,6) = MatrixXd::Zero(3,6);
     C.block(3,6,3,3) = Matrix3d::Identity();
 
-    Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-6, 1.0e-6, 1.0e-6, 1.0e-4, 1.0e-4, 1.0e-4;
-    R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-3, 1.0e-3, 1.0e-3;
-    auto kalman_filter = new KalmanFilter(dt, A, C, Q, R, P);
+    // Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-6, 1.0e-6, 1.0e-6, 1.0e-4, 1.0e-4, 1.0e-4; -------------------TODO check which are better!--------------------------
+    // R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-3, 1.0e-3, 1.0e-3;
+
+    Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-7, 1.0e-7, 1.0e-7, 1.0e-6, 1.0e-6, 1.0e-6;
+    R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-2, 1.0e-2, 1.0e-2;
+    auto kalman_filter = new KalmanFilters::KalmanFilter(dt, A, C, Q, R, P);
+
+
     VectorXd x0 = VectorXd::Zero(n_kf);
     double t0 = 0;
     kalman_filter->init(t0, x0);
@@ -283,7 +312,7 @@ int main() {
   	R_ekf.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-12, 1e-1, 1e-1, 1e-1;
   	VectorXd y_ekf = VectorXd::Zero(m_ekf);
 
-  	auto extended_kalman_filter = new QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
+  	auto extended_kalman_filter = new KalmanFilters::QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
 
   	VectorXd x0_ekf = VectorXd::Zero(n_ekf);
   	extended_kalman_filter->init(t0, x0_ekf);
@@ -572,17 +601,12 @@ int main() {
 		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
 		redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
-		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
 
-		//offline processing
-		if(state !=GOTO_INITIAL_CONFIG)
-		{
-			redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
-			redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
-			redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
-			redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
-			redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
-		}
+
+		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi_RLS);
+		redis_client.setEigenMatrixDerived(LINEAR_VEL_KEY, vel);
+		redis_client.setEigenMatrixDerived(LINEAR_ACC_KIN_KEY, accel_kin);
+		redis_client.setEigenMatrixDerived(LINEAR_VEL_KF_KEY, kf_vel);
 
 
 

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdexcept>
 
+namespace ParameterEstimation
+{
 LeastSquare::LeastSquare(bool lin)
 {	
 	_accel_local.setZero();
@@ -220,6 +222,7 @@ Eigen::VectorXd LeastSquare::computeContactForceTorque(const Eigen::VectorXd& fo
 
 	return _ft_contact;
 }
+} /* namespace ParameterEstimation */
 
 
 

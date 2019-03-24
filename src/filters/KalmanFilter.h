@@ -1,11 +1,15 @@
-#ifndef KALMAN_FILTER_H_
-#define KALMAN_FILTER_H_
+
+#ifndef KALMAN_FILTERS_KALMAN_FILTER_H_
+#define KALMAN_FILTERS_KALMAN_FILTER_H_
+
 
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
 #include <eigen3/Eigen/Dense>
 
+namespace KalmanFilters
+{
 class KalmanFilter {
 public: 
 
@@ -86,5 +90,7 @@ private:
 
 
 };
+} /* namespace KalmanFilters */
 
-#endif //KALMAN_FILTER_H_
+
+#endif //KALMAN_FILTERS_KALMAN_FILTER_H_

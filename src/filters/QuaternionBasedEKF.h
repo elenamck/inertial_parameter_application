@@ -8,12 +8,19 @@
 * Consequently, if measurment provides quaternions: convert them first!!!
 */
 
+<<<<<<< HEAD:src/filters/QuaternionBasedEKF.h
+=======
+#ifndef KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
+#define KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_H_
+>>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/filters/QuaternionBasedEKF.h
 
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
 #include <eigen3/Eigen/Dense>
 
+namespace KalmanFilters
+{
 class QuaternionBasedEKF {
 public:
 
@@ -146,5 +153,10 @@ private:
 
 
 };
+} /* namespace KalmanFilters */
 
+<<<<<<< HEAD:src/filters/QuaternionBasedEKF.h
 #endif //EXTENDED_KALMAN_FILTER_H_
+=======
+#endif //KALMAN_FILTERS_EXTENDED_KALMAN_FILTER_H_
+>>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/filters/QuaternionBasedEKF.h

@@ -5,7 +5,7 @@
 #include "filters/ButterworthFilter.h"
 #include "filters/KalmanFilter.h"
 #include "filters/QuaternionBasedEKF.h"
-#include "filters/SavitzkyGolayFilter.h"
+// #include "filters/SavitzkyGolayFilter.h"
 
 #include <fstream>
 #include <iostream>
@@ -31,8 +31,8 @@ const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
-// const bool flag_simulation = true;
-const bool flag_simulation = false;
+const bool flag_simulation = true;
+// const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 
@@ -326,7 +326,7 @@ int main() {
    //  std::cout << "R: \n" << R << std::endl;
   	// std::cout << "P: \n" << P << std::endl;
 
-    auto kalman_filter = new KalmanFilter(dt, A, C, Q, R, P);
+    auto kalman_filter = new KalmanFilters::KalmanFilter(dt, A, C, Q, R, P);
 
     //best guess of initial states
     VectorXd x0 = VectorXd::Zero(n);
@@ -371,7 +371,7 @@ int main() {
   	VectorXd y_ekf = VectorXd::Zero(m_ekf);
 
 
-  	auto extended_kalman_filter = new QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
+  	auto extended_kalman_filter = new KalmanFilters::QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
 
   	 //best guess of initial states
   	VectorXd x0_ekf = VectorXd::Zero(n_ekf);

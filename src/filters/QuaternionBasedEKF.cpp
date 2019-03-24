@@ -4,6 +4,9 @@
 
 #include "QuaternionBasedEKF.h"
 
+namespace KalmanFilters
+{
+
 QuaternionBasedEKF::QuaternionBasedEKF() {}
 
 QuaternionBasedEKF::QuaternionBasedEKF(
@@ -295,5 +298,6 @@ Eigen::Vector3d QuaternionBasedEKF::print_increment_func()
 {
 	return print_increment;
 }
+} /* namespace KalmanFilters */
 
 
