@@ -4,14 +4,6 @@ SET(CMAKE_CXX_FLAGS "-std=c++11")
 SET(CMAKE_BUILD_TYPE "Debug")
 # SET(CMAKE_BUILD_TYPE "Release")
 
-# set(INERTIAL_PARAMERTER_APP_COMMON_SOURCE ${PROJECT_SOURCE_DIR}/src/filters/ExtendedKalmanFilter.cpp
-# 	${PROJECT_SOURCE_DIR}/src/filters/KalmanFilter.cpp
-# 	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF.cpp
-# 	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF2.cpp
-# 	${PROJECT_SOURCE_DIR}/src/parameter_estimation/RecursiveLeastSquare.cpp
-# 	${PROJECT_SOURCE_DIR}/src/parameter_estimation/LeastSquare.cpp
-# 	)
-
 
 # - eigen3
 set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
@@ -132,7 +124,9 @@ set(INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES
 	)
 
 # add apps
-set (INERTIAL_PARAMERTER_APP_BINARY_DIR                  ${PROJECT_SOURCE_DIR}/bin)
+set (INERTIAL_PARAMERTER_APP_BINARY_DIR  
+	${PROJECT_SOURCE_DIR}/bin)
 
 
 add_subdirectory(01-panda_force_control)
+add_subdirectory(02-utilities)
