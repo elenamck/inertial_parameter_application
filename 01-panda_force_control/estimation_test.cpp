@@ -21,7 +21,7 @@ using namespace std;
 using namespace Eigen;
 
 const string robot_file = "../resources/01-panda_force_control/panda_arm.urdf";
-const std::string robot_name = "FRANKA-PANDA";
+const string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
@@ -31,48 +31,61 @@ const bool flag_simulation = true;
 const bool inertia_regularization = true;
 // redis keys:
 // - write:
-std::string JOINT_TORQUES_COMMANDED_KEY;
-std::string LOCAL_GRAVITY_KEY;
+string JOINT_TORQUES_COMMANDED_KEY;
+string LOCAL_GRAVITY_KEY;
 
 // - read:
-std::string JOINT_ANGLES_KEY;
-std::string JOINT_VELOCITIES_KEY;
-std::string EE_FORCE_SENSOR_FORCE_KEY;
-std::string ACCELEROMETER_DATA_KEY;
-std::string GYROSCOPE_DATA_KEY;
+string JOINT_ANGLES_KEY;
+string JOINT_VELOCITIES_KEY;
+string EE_FORCE_SENSOR_FORCE_KEY;
+string ACCELEROMETER_DATA_KEY;
+string GYROSCOPE_DATA_KEY;
 
 
 // - model
-std::string MASSMATRIX_KEY;
-std::string CORIOLIS_KEY;
-std::string ROBOT_GRAVITY_KEY;
+string MASSMATRIX_KEY;
+string CORIOLIS_KEY;
+string ROBOT_GRAVITY_KEY;
 
 // - offline processing
-std::string LINEAR_ACCELERATION_LOCAL_KEY;
-std::string ANGULAR_VELOCITY_LOCAL_KEY;
-std::string EE_FORCE_SENSOR_KEY;
-std::string QUATERNION_KEY;
+string LINEAR_ACCELERATION_LOCAL_KEY;
+string ANGULAR_VELOCITY_LOCAL_KEY;
+string EE_FORCE_SENSOR_KEY;
+string QUATERNION_KEY;
 
-std::string LINEAR_VEL_KF_KEY;
+string LINEAR_VEL_KF_KEY;
 
 // - inertial parameters
-std::string INERTIAL_PARAMS_KEY;
-std::string INERTIAL_PARAMS_LS_KEY;
-std::string INERTIAL_PARAMS_DEBUG_KEY; //computed with functions, not the library
+string INERTIAL_PARAMS_KEY;
+string INERTIAL_PARAMS_LS_KEY;
+string INERTIAL_PARAMS_DEBUG_KEY; //computed with functions, not the library
 
 // - kinematics:
-std::string POSITION_KEY;
-std::string LINEAR_VEL_KIN_KEY;
-std::string LINEAR_ACC_KIN_KEY;
-std::string ORIENTATION_QUATERNION_KEY;
-std::string ANGULAR_VEL_KIN_KEY;
-std::string ANGULAR_ACC_KIN_KEY;
+string POSITION_KEY;
+string LINEAR_VEL_KIN_KEY;
+string LINEAR_ACC_KIN_KEY;
+string ORIENTATION_QUATERNION_KEY;
+string ANGULAR_VEL_KIN_KEY;
+string ANGULAR_ACC_KIN_KEY;
 
 #define  GOTO_INITIAL_CONFIG 	 0
 #define	 MOVE_FIRST			     1
 #define  MOVE_SECOND	         2
 #define  MOVE_THIRD				 3
-#define  MOVE_FORTH 			 4  
+#define  MOVE_X					 4 
+#define  MOVE_Y					 5
+#define  MOVE_Z					 6
+#define  MOVE_X_BACK			 7
+#define  MOVE_Y_BACK			 8
+#define  MOVE_Z_BACK			 9
+#define	 MOVE_XY				 10
+#define	 MOVE_XZ				 11
+#define	 MOVE_YZ				 12
+#define	 MOVE_XY_BACK			 13
+#define	 MOVE_XZ_BACK			 14
+#define	 MOVE_YZ_BACK			 15
+#define	 REST 					 16
+
 
 
 
@@ -188,7 +201,7 @@ int main() {
 	Vector3d vel_sat = Vector3d(0.3,0.3,0.3);
 	// pos ori controller
 	const string link_name = "link7";
-	const Eigen::Vector3d pos_in_link = Vector3d(0,0,0.15);
+	const Vector3d pos_in_link = Vector3d(0,0,0.15);
 	auto pos_task = new Sai2Primitives::PositionTask(robot, link_name, pos_in_link);
 	pos_task->_max_velocity = 0.11;
 
@@ -203,6 +216,18 @@ int main() {
 	Vector3d pos_des_2 = Vector3d(.5,-0.4,0.6);
 	Vector3d pos_des_3 = Vector3d(.5,-0.4,0.1);
 	Vector3d pos_des_4 = Vector3d(.5,0.4,0.6);
+
+	double delta_x = 0.1;
+	double delta_y = 0.1;
+	double delta_z = 0.1;
+
+	double x_des = 0.7;
+	double y_des = 0.5;
+	double z_des = 0.6;
+
+	double x_des_back =  0.1;
+	double y_des_back = -0.5;
+	double z_des_back =  0.2;
 
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
@@ -270,8 +295,8 @@ int main() {
 	timer.setCtrlCHandler(sighandler);    // exit while loop on ctrl-c
 	timer.initializeTimer(1000000); // 1 ms pause before starting loop
 	// create timer
-	std::chrono::high_resolution_clock::time_point t_start;
-	std::chrono::duration<double> t_elapsed;
+	chrono::high_resolution_clock::time_point t_start;
+	chrono::duration<double> t_elapsed;
 	// while window is open:
 	while (runloop) {
 
@@ -291,7 +316,7 @@ int main() {
 		{
 			robot->updateModel();
 			robot->coriolisForce(coriolis);
-			robot->linearAcceleration(accel,link_name, Eigen::Vector3d::Zero());
+			robot->linearAcceleration(accel,link_name, Vector3d::Zero());
 			robot->angularAcceleration(aaccel,link_name);
 			robot->angularVelocity(avel,link_name);
 
@@ -305,7 +330,7 @@ int main() {
 			orientation_quaternion = orientation;
 			orientation_quaternion.normalize();
 			orientation_quaternion_aux << orientation_quaternion.w() , orientation_quaternion.vec();
-			robot->position(position, link_name, pos_in_link);
+			robot->position(position, link_name, Vector3d::Zero());
 			position = R_link.transpose()*position;
 			robot->linearVelocity(velocity, link_name);
 			velocity = R_link.transpose()*velocity;
@@ -330,6 +355,10 @@ int main() {
 
 		RLS_2 ->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
 		phi_RLS = RLS_2->getInertialParameterVector();
+		center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+		inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+
+
 
 
 		if(state == GOTO_INITIAL_CONFIG)
@@ -347,18 +376,10 @@ int main() {
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
 			if(config_error.norm() < 0.1)
 			{
-				joint_task->reInitializeTask();
-
-				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
-			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
-			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
-
-			    pos_task->_goal_position = pos_des_1;
+				joint_task->reInitializeTask();			    
 			    joint_task->_goal_position(6) -= 2.0*M_PI;
 
-			    state = MOVE_THIRD;
+			    state = MOVE_XY;
 				
 			}
 		}
@@ -367,6 +388,7 @@ int main() {
 
 		else if(state == MOVE_FIRST)
 		{
+			pos_task->_goal_position = pos_des_1;
 
 			N_prec.setIdentity();
 			pos_task->updateTaskModel(N_prec);
@@ -386,11 +408,9 @@ int main() {
 				pos_task->reInitializeTask();
 				pos_task->enableVelocitySaturation(vel_sat);
 
-				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
-			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
-			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 			
 				pos_task->_goal_position = pos_des_2;
 			    joint_task->_goal_position(6) += 2.0*M_PI;
@@ -423,11 +443,9 @@ int main() {
 				pos_task->reInitializeTask();
 				pos_task->enableVelocitySaturation(vel_sat);
 
-				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
-			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
-			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 			
 				pos_task->_goal_position = pos_des_3;
 			    joint_task->_goal_position(6) -= 2.0*M_PI;
@@ -458,22 +476,24 @@ int main() {
 				pos_task->reInitializeTask();
 				pos_task->enableVelocitySaturation(vel_sat);
 
-				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-				std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
-			    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
-			    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 			
 				pos_task->_goal_position = pos_des_4;
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
-				state = MOVE_FORTH;		
+				state = REST;		
 			}
 
 
 		}
-		else if(state == MOVE_FORTH)
+
+
+		else if(state == MOVE_X)
 		{
+
+			pos_task->_goal_position(0) = x_des;
 
 			N_prec.setIdentity();
 			pos_task->updateTaskModel(N_prec);
@@ -486,7 +506,402 @@ int main() {
 
 			command_torques = joint_task_torques  + pos_task_torques + coriolis;
 
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
 
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_Y;		
+			}
+
+
+		}
+
+		else if(state == MOVE_Y)
+		{
+
+			pos_task->_goal_position(1) = y_des;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_Z;		
+			}
+		}
+		else if(state == MOVE_Z)
+		{
+
+			pos_task->_goal_position(2) = z_des;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_X_BACK;		
+			}
+		}
+
+		else if(state == MOVE_X_BACK)
+		{
+
+			pos_task->_goal_position(0) = x_des_back;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_Y_BACK;		
+			}
+		}
+
+		else if(state == MOVE_Y_BACK)
+		{
+
+			pos_task->_goal_position(1) = y_des_back;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_Z_BACK;		
+			}
+		}
+
+		else if(state == MOVE_Z_BACK)
+		{
+
+			pos_task->_goal_position(2) = z_des_back;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = REST;		
+			}
+		}
+
+		else if(state == MOVE_XY)
+		{
+			pos_task->_goal_position(0) = x_des;
+			pos_task->_goal_position(1) = y_des;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+			
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_YZ_BACK;		
+			}
+		}
+
+		else if(state == MOVE_XY_BACK)
+		{
+			pos_task->_goal_position(0) = x_des_back;
+			pos_task->_goal_position(1) = y_des_back;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_Z_BACK;		
+			}
+		}
+
+		else if(state == MOVE_XZ)
+		{
+			pos_task->_goal_position(0) = x_des;
+			pos_task->_goal_position(2) = z_des;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_XZ_BACK;		
+			}
+		}
+
+		else if(state == MOVE_XZ_BACK)
+		{
+			pos_task->_goal_position(0) = x_des_back;
+			pos_task->_goal_position(2) = z_des_back;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = REST;		
+			}
+		}
+
+		else if(state == MOVE_YZ)
+		{
+			pos_task->_goal_position(1) = y_des;
+			pos_task->_goal_position(2) = z_des;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = REST;		
+			}
+		}
+
+		else if(state == MOVE_YZ_BACK)
+		{
+			pos_task->_goal_position(1) = y_des_back;
+			pos_task->_goal_position(2) = z_des_back;
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
+
+			VectorXd config_error_pos = pos_task->_goal_position - pos_task->_current_position;
+			if(config_error_pos.norm() < 0.2)
+			{	
+				joint_task->reInitializeTask();
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+			    joint_task->_goal_position(6) += 2.0*M_PI;
+
+				state = MOVE_YZ;		
+			}
+		}
+
+
+
+		else if(state == REST)
+		{
+
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques  + pos_task_torques + coriolis;
 		}
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
@@ -515,16 +930,14 @@ int main() {
     redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 
     double end_time = timer.elapsedTime();
-    std::cout << "\n";
-    std::cout << "Loop run time  : " << end_time << " seconds\n";
-    std::cout << "Loop updates   : " << timer.elapsedCycles() << "\n";
-    std::cout << "Loop frequency : " << timer.elapsedCycles()/end_time << "Hz\n";
+    cout << "\n";
+    cout << "Loop run time  : " << end_time << " seconds\n";
+    cout << "Loop updates   : " << timer.elapsedCycles() << "\n";
+    cout << "Loop frequency : " << timer.elapsedCycles()/end_time << "Hz\n";
 
-	center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-	inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-	std::cout << "estimated mass RLS not lin \n" << phi_RLS(0) << "\n";
-    std::cout << "estimated center of mass RLS not lin \n" << 	center_of_mass_RLS.transpose() << "\n";
-    std::cout << "estimated Inertia RLS" << inertia_tensor_RLS << "\n";
+	cout << "the estimated mass is: \n" << phi_RLS(0) << endl;
+    cout << "the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+    cout << "the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 
     return 0;
 
