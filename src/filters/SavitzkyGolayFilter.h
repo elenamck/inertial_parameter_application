@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include <cassert>
 #include <cstddef>
 #include <sstream>

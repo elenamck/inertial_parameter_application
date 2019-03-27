@@ -6,7 +6,7 @@
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
 namespace KalmanFilters
 {

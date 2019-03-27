@@ -2,7 +2,7 @@
 #ifndef PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_
 #define PARAMETER_ESTIMATION_RECURSIVE_LEAST_SQUARE_H_
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
 namespace ParameterEstimation 
 {

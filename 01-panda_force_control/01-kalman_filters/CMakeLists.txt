@@ -1,0 +1,20 @@
+# create an executabl
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${INERTIAL_PARAMERTER_APP_BINARY_DIR}/01-panda_force_control/01-kalman_filters)
+
+# add the include directory to the include paths
+INCLUDE_DIRECTORIES (
+	${INERTIAL_PARAMETER_INCLUDE_DIRS})
+
+
+# ADD_EXECUTABLE (kf_four_states kf_four_states.cpp)
+# ADD_EXECUTABLE (kf_test kf_test.cpp)
+ADD_EXECUTABLE (ekf_test ekf_test.cpp)
+ADD_EXECUTABLE (kf_tuning kf_tuning.cpp)
+
+
+
+# and link the library against the executable
+TARGET_LINK_LIBRARIES (kf_tuning ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
+#TARGET_LINK_LIBRARIES (kf_test ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES})
+#TARGET_LINK_LIBRARIES (kf_four_states ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES})
+TARGET_LINK_LIBRARIES (ekf_test ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})

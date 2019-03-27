@@ -8,7 +8,7 @@ SET(CMAKE_BUILD_TYPE "Debug")
 # - eigen3
 set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
 if(NOT EIGEN3_INCLUDE_DIR)
-	find_package(Eigen3 QUIET)
+	find_package(Eigen3 REQUIRED)
 	# TODO: Find automatic way to find for Ubuntu 14.04
 	if(NOT EIGEN3_INCLUDE_DIR)
 		set(EIGEN3_INCLUDE_DIR /usr/include/eigen3)
@@ -92,8 +92,15 @@ find_package(glfw3 QUIET)
 find_library(GLFW_LIBRARY glfw)
 
 # - hiredis
-find_library(HIREDIS_LIBRARY hiredis)
+# - hiredis
+find_path(HIREDIS_INCLUDE_DIR NAMES hiredis/hiredis.h)
+find_library(HIREDIS_LIBRARY NAMES hiredis)
 
+set(HIREDIS_LIBRARIES ${HIREDIS_LIBRARY})
+set(HIREDIS_INCLUDE_DIR ${LHIREDIS_INCLUDE_DIR})
+include_directories(${HIREDIS_INCLUDE_DIR})
+find_library(HIREDIS_LIBRARY hiredis)
+# find_library(HIREDIS_LIBRARY hiredis)
 
 
 
@@ -121,6 +128,7 @@ set(INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES
 	${HIREDIS_LIBRARY}
 	${GLFW_LIBRARY}
 	${JSONCPP_LIBRARY}
+	${HIREDIS_LIBRARY}
 	)
 
 # add apps

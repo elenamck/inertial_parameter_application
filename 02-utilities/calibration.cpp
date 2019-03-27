@@ -17,7 +17,7 @@ void sighandler(int sig)
 using namespace std;
 using namespace Eigen;
 
-const string robot_file = "../resources/01-panda_force_control/panda_arm.urdf";
+const string robot_file = "../resources/02-utilities/panda_arm.urdf";
 const std::string robot_name = "FRANKA-PANDA";
 
 #define  FIRST_MEAS		 0

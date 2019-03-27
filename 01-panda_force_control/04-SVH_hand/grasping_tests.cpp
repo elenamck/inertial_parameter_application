@@ -19,7 +19,7 @@ void sighandler(int sig)
 using namespace std;
 using namespace Eigen;
 
-const string robot_file = "../resources/01-panda_force_control/panda_arm.urdf";
+const string robot_file = "../../resources/01-panda_force_control/panda_arm.urdf";
 const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
@@ -70,9 +70,6 @@ std::string POSITION_KEY;
 #define  LET_GO_OF_OBJECT 		 	7
 #define	 MOVE_BACK					8
 #define  GO_BACK_TO_INITIAL_CONFIG 	9
-#define  TEST_1					   10
-#define  TEST_2					   11
-#define  TEST_3					   12
 
 /* Data Matrix Force/Torque virtual A_t based on 
  *"Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
@@ -136,7 +133,7 @@ int main() {
 	VectorXd force_moment = VectorXd::Zero(6);
 	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
 	ifstream bias;
-	bias.open("FT_data1.txt");
+	bias.open("../../02-utilities/FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
         cout << "Can't open Data!" << endl;
@@ -477,7 +474,12 @@ int main() {
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
 				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-				state = TEST_1;
+				joint_task->_goal_position = desired_grasping_configuration;
+				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_pre_grasp);
+				cout << "hand_pre_grasp" << hand_pre_grasp.transpose() << endl;
+				state = MOVE_TO_OBJECT;
+
+				
 			}
 
 		}
@@ -767,83 +769,6 @@ int main() {
 
 
 		}
-
-
-		if(state == TEST_1)
-
-		{
-			posori_task->_goal_position = Vector3d(0,0,0.7);
-			Matrix3d desired_orientation;
-			desired_orientation << 1, 0,0 ,0,1,0,0,0,1;
-			posori_task->_desired_orientation = desired_orientation;
-			// update tasks models
-			N_prec.setIdentity();
-			posori_task->updateTaskModel(N_prec);
-			N_prec = posori_task->_N;
-			joint_task->updateTaskModel(N_prec);
-
-			posori_task->computeTorques(posori_task_torques);
-			joint_task->computeTorques(joint_task_torques);
-
-
-			command_torques = posori_task_torques+ joint_task_torques + coriolis;
-
-			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
-
-			cout << config_error.norm() <<endl;
-			if(config_error.norm() < 0.2)
-			{
-				joint_task->reInitializeTask();
-				posori_task->reInitializeTask();
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-				state = TEST_2;
-				
-			}
-			
-
-		}
-
-		if(state == TEST_2)
-		{
-			joint_task->_goal_position(2) = M_PI/2.0
-			// update tasks models
-			N_prec.setIdentity();
-			joint_task->updateTaskModel(N_prec);
-
-			joint_task->computeTorques(joint_task_torques);
-
-
-			command_torques = joint_task_torques + coriolis;
-
-			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-
-			cout << config_error.norm() <<endl;
-			if(config_error.norm() < 0.2)
-			{
-				joint_task->reInitializeTask();
-				posori_task->reInitializeTask();
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-				state = TEST_3;
-			}
-			
-
-		}
-
-		if(state == TEST_3)
-		{
-			joint_task->_goal_position(2) = -M_PI/2.0
-			// update tasks models
-			N_prec.setIdentity();
-			joint_task->updateTaskModel(N_prec);
-			posori_task->updateTaskModel(N_prec);
-			joint_task->computeTorques(joint_task_torques);
-			posori_task->computeTorques(posori_task_torques);
-
-			command_torques = posori_task_torques+ joint_task_torques + coriolis;
-			
-
-		}
-
 
 
 

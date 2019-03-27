@@ -4,7 +4,7 @@
 
 	<robot name="FRANKA-PANDA">
 		<!-- model node is required -->
-		<model dir="../resources/01-panda_force_control" path="panda_arm_FT_sensor.urdf" name="panda" />
+		<model dir="../resources/02-utilities" path="panda_arm_FT_sensor.urdf" name="panda" />
 		<!-- origin node is optional -->
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot>

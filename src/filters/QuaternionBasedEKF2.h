@@ -1,16 +1,11 @@
 
-<<<<<<< HEAD:src/filters/QuaternionBasedEKF2.h
-#ifndef QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
-#define QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
-=======
 #ifndef KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
 #define KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
 
 #include <math.h>
 #include <stdexcept>
 #include <iostream>
-#include <eigen3/Eigen/Dense>
->>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/filters/QuaternionBasedEKF2.h
+#include <Eigen/Dense>
 /**************ATTENTION****************/
 /*
 * Quaternions in Eigen: q = (q_vec q_const)
@@ -18,15 +13,8 @@
 * Consequently, if measurment provides quaternions: convert them first!!!
 */
 
-<<<<<<< HEAD:src/filters/QuaternionBasedEKF2.h
-#include <math.h>
-#include <stdexcept>
-#include <iostream>
-#include <eigen3/Eigen/Dense>
-=======
 namespace KalmanFilters
 {
->>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/filters/QuaternionBasedEKF2.h
 
 class QuaternionBasedEKF2 {
 public:
@@ -160,10 +148,6 @@ private:
 
 
 };
-<<<<<<< HEAD:src/filters/QuaternionBasedEKF2.h
 
-#endif //QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
-=======
 } /* namespace KalmanFilters */
 #endif //KALMAN_FILTERS_QUATERNION_BASED_EXTENDED_KALMAN_FILTER_2_H_
->>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/filters/QuaternionBasedEKF2.h

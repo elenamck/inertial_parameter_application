@@ -18,8 +18,8 @@
 
 using namespace std;
 
-const string world_file = "../resources/01-panda_force_control/world.urdf";
-const string robot_file = "../resources/01-panda_force_control/panda_arm_FT_sensor.urdf";
+const string world_file = "../resources/02-utilities/world.urdf";
+const string robot_file = "../resources/02-utilities/panda_arm_FT_sensor.urdf";
 const string robot_name = "FRANKA-PANDA";
 const string camera_name = "camera_fixed";
 

@@ -1,18 +1,12 @@
-<<<<<<< HEAD:src/parameter_estimation/LeastSquare.h
-#ifndef LEAST_SQUARE_H
-#define LEAST_SQUARE_H
 
-#include <eigen3/Eigen/Dense>
-=======
 #ifndef PARAMETER_ESTIMATION_LEAST_SQUARE_H
 #define PARAMETER_ESTIMATION_LEAST_SQUARE_H
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
 namespace ParameterEstimation
-{
->>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/parameter_estimation/LeastSquare.h
 
+{
 class LeastSquare	
 {
 public:
@@ -107,9 +101,5 @@ private:
 
 } /* namespace ParameterEstimation */
 
-<<<<<<< HEAD:src/parameter_estimation/LeastSquare.h
 
-#endif //LEAST_SQUARE_H 
-=======
 #endif //PARAMETER_ESTIMATION_LEAST_SQUARE_H 
->>>>>>> a540a77c09a5f4c0ab93b305c56ed57b3930756f:src/parameter_estimation/LeastSquare.h

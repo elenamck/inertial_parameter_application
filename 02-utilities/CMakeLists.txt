@@ -4,6 +4,8 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${INERTIAL_PARAMERTER_APP_BINARY_DIR}/02-uti
 # add the include directory to the include paths
 INCLUDE_DIRECTORIES (
 	${INERTIAL_PARAMETER_INCLUDE_DIRS})
+find_library(HIREDIS_LIBRARY hiredis)
+
 
 #controller for checking if the transformation between the IMU frame and the force sensor frame is correct
 ADD_EXECUTABLE (find_IMU_frame find_IMU_frame.cpp)

@@ -20,7 +20,7 @@ void sighandler(int sig)
 using namespace std;
 using namespace Eigen;
 
-const string robot_file = "../resources/01-panda_force_control/panda_arm.urdf";
+const string robot_file = "../../resources/01-panda_force_control/panda_arm.urdf";
 const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
@@ -146,7 +146,7 @@ int main() {
 	VectorXd force_moment = VectorXd::Zero(6);
 	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
 	ifstream bias;
-	bias.open("FT_data1.txt");
+	bias.open("../../02-utilities/FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
         cout << "Can't open Data!" << endl;
