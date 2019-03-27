@@ -7,7 +7,7 @@
   * 02-adaptive_filters: controllers with functions for estimation in main
   * 03-trajectories: controllers for testing different trajectories
   * 04-SVH_hand: controllers for grasping
-  * 05-estimation_controllers: current testing files
+  * 05-estimation_controllers: current tests
 * 02-utilities: 
   * includes controller for force sensor calibration and controller for checking wether the IMU frame is transformed correctly in the force sensor frame
 * data_collection: plotting and logging python scripts for redis-keys
