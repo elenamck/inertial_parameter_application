@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="svh">
+<!-- 
+  <xacro:property name="cyl_radius" value="0.001" />
+  <xacro:macro name="svh" params="parent name side *origin"> -->
+
+    <!-- side =-1 for left hand  -->
+    <!-- RIGHT HAND = 1, LEFT HAND = -1 -->
+    <!-- BASE_LINE LINKS -->
+    
+<!--     <joint name="svh_base_joint" type="fixed" >
+      <xacro:insert_block name="origin" />
+      <parent link="${parent}" />
+      <child link="svh_base_link" />
+    </joint> -->
+    
+    <link name="svh_base_link">
+      <!-- <xacro:insert_block name="origin" /> -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="../../../robot_models/svh/meshes/base10.obj" />
+        </geometry>
+      </visual>
+<!--       <collision>
+	<origin xyz="0 0 -0.032" rpy="0 0 0" />
+	<geometry>
+         
+	</geometry> -->
+      <!-- </collision> -->
+    </link>
+
+   
+
+    <!-- LENGTH NOT FOUND IN DATASHEET! GUESSED!!! -->
+    <link name="svh_e1">
+      <visual>
+	<origin rpy="0 0 0" xyz="0 0.01313 0" />
+	<geometry>
+          <mesh scale="-1 1 1" filename="../../../robot_models/svh/meshes/h10.obj" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin rpy="0 0 0" xyz="0 0.01313 0" />
+	<geometry>
+          <mesh scale="-1 1 1" filename="../../../robot_models/svh/meshes/h10.obj" />
+	</geometry>
+      </collision>
+    </link>
+
+
+
+
+    <!-- THUMB LINKS -->
+    <link name="svh_z">
+      <visual>
+	<origin xyz="0 0 0.02442" />
+	<geometry>
+          <mesh scale="1 -1 1" filename="../../../robot_models/svh/meshes/d10.obj" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 0.02442" />
+	<geometry>
+          <mesh scale="1 -1 1" filename="../../../robot_models/svh/meshes/d10.obj" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_virtual_a" />
+
+
+    
+    <joint name="svh_Thumb_Helper" type="fixed">
+      <parent link="svh_z" />
+      <child link="svh_virtual_a" />
+      <origin xyz="0 0 0.04596" rpy="0 -1.5707 3.1416" />
+    </joint>
+
+
+    <!-- BASE_LINE JOINTS -->
+    <joint name="svh_Thumb_Opposition" type="revolute">
+      <parent link="svh_e1" />
+      <child link="svh_z" />
+      <limit effort="1000.0" lower="0.0" upper="0.9879" velocity="1" />
+      <origin xyz="0.01690 0.02626 0" rpy="0 0.2618 1.571" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <joint name="svh_f4" type="fixed">
+      <parent link="svh_base_link" />
+      <child link="svh_e1" />
+      <origin xyz="0 -0.01313 0" rpy="0 0 0" />
+    </joint>
+
+  
+<!-- </xacro:macro> -->
+ </robot>
+

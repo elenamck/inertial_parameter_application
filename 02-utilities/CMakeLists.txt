@@ -14,7 +14,7 @@ ADD_EXECUTABLE (find_IMU_frame find_IMU_frame.cpp)
 ADD_EXECUTABLE (calibration calibration.cpp)
 
 #simulation file
-ADD_EXECUTABLE (simviz00 simviz.cpp)
+ADD_EXECUTABLE (simviz02 simviz.cpp)
 
 
 
@@ -22,7 +22,7 @@ ADD_EXECUTABLE (simviz00 simviz.cpp)
 # and link the library against the executable
 TARGET_LINK_LIBRARIES (find_IMU_frame ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES})
 TARGET_LINK_LIBRARIES (calibration ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES})
-TARGET_LINK_LIBRARIES (simviz00 ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES})
+TARGET_LINK_LIBRARIES (simviz02 ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES})
 
 
 # export resources such as model files.

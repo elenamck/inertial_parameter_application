@@ -177,7 +177,7 @@ int main() {
 
 
 	// load robots
-	auto robot = new Sai2Model::Sai2Model(robot_file, false);
+	auto robot = new Sai2Model::Sai2Model(robot_file, true);
 
 	// read from Redis
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
@@ -198,12 +198,12 @@ int main() {
 
 
 	//Controllers
-	Vector3d vel_sat = Vector3d(0.3,0.3,0.3);
+	Vector3d vel_sat = Vector3d(0.4,0.4,0.4);
 	// pos ori controller
-	const string link_name = "link7";
+	const string link_name = "link8";
 	const Vector3d pos_in_link = Vector3d(0,0,0.15);
 	auto pos_task = new Sai2Primitives::PositionTask(robot, link_name, pos_in_link);
-	pos_task->_max_velocity = 0.11;
+	pos_task->_max_velocity = 0.3;
 
 	pos_task->_kp = 100.0;
 	pos_task->_kv = 2.1*sqrt(pos_task->_kp);
@@ -231,12 +231,12 @@ int main() {
 
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
-	joint_task->_max_velocity = M_PI/6.0;
+	joint_task->_max_velocity = M_PI/4.0;
 	joint_task->_kp = 50.0;
 	joint_task->_kv = 2.4 * sqrt(joint_task->_kp);
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
-	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
+	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 0;
 	// desired_initial_configuration << 0, 10, 0, -125, 0, 135, 0;
 
 
@@ -360,9 +360,9 @@ int main() {
 
 
 
-
 		if(state == GOTO_INITIAL_CONFIG)
 		{	
+		cout << "still going to init: "  << endl;
 
 			// update tasks models
 			N_prec.setIdentity();
@@ -376,8 +376,10 @@ int main() {
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
 			if(config_error.norm() < 0.1)
 			{
+				cout << "still leaving init: "  << endl;
+
 				joint_task->reInitializeTask();			    
-			    joint_task->_goal_position(6) -= 2.0*M_PI;
+			    joint_task->_goal_position(6) = M_PI;
 
 			    state = MOVE_XY;
 				
@@ -716,7 +718,7 @@ int main() {
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 			
-			    joint_task->_goal_position(6) += 2.0*M_PI;
+			    joint_task->_goal_position(6) = M_PI;
 
 				state = MOVE_YZ_BACK;		
 			}
@@ -881,9 +883,9 @@ int main() {
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 
-			    joint_task->_goal_position(6) += 2.0*M_PI;
+			    joint_task->_goal_position(6) = -M_PI;
 
-				state = MOVE_YZ;		
+				state = REST;		
 			}
 		}
 

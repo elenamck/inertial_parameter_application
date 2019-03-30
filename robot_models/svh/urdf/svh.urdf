@@ -1,0 +1,655 @@
+<?xml version="1.0"?>
+<robot name="svh">
+
+  <xacro:property name="cyl_radius" value="0.001" />
+  <xacro:macro name="svh" params="parent name side *origin">
+
+    <!-- side =-1 for left hand  -->
+    <!-- RIGHT HAND = 1, LEFT HAND = -1 -->
+    <!-- BASE_LINE LINKS -->
+    
+<!--     <joint name="svh_base_joint" type="fixed" >
+      <xacro:insert_block name="origin" />
+      <parent link="${parent}" />
+      <child link="svh_base_link" />
+    </joint> -->
+    
+    <link name="svh_base_link">
+<!--       <xacro:insert_block name="origin" />
+ -->      <visual>
+	<origin xyz="0 0 -0.032" rpy="0 0 0" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/base10.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 -0.032" rpy="0 0 0" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/base10.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_d">
+      <!-- <visual> -->
+      <!-- 	<geometry> -->
+      <!-- 	  <cylinder length="0.110" radius=0.001" /> -->
+      <!-- 	</geometry> -->
+      <!-- 	<material name="svh_green" /> -->
+      <!-- </visual> -->
+    </link>
+
+    <link name="svh_h">
+      <!-- <visual> -->
+      <!-- 	<origin rpy="0 1.571 0" xyz="0.0125 0 0.0825" /> -->
+      <!-- 	<geometry> -->
+      <!-- 	  <cylinder length="0.025" radius=0.001" /> -->
+      <!-- 	</geometry> -->
+      <!-- 	<material name="svh_green" /> -->
+      <!-- </visual> -->
+    </link>
+
+    <link name="svh_d2">
+      <!-- <visual> -->
+      <!-- 	<origin rpy="0 0 0" xyz="0.025 0 0.09625" /> -->
+      <!-- 	<geometry> -->
+      <!-- 	  <cylinder length="0.0275" radius=0.001" /> -->
+      <!-- 	</geometry> -->
+      <!-- 	<material name="svh_green" /> -->
+      <!-- </visual> -->
+    </link>
+
+    <!-- LENGTH NOT FOUND IN DATASHEET! GUESSED!!! -->
+    <link name="svh_e1">
+      <visual>
+	<origin rpy="0 0 0" xyz="0 0.01313 0" />
+	<geometry>
+          <mesh scale="-1 1 1" filename="../../../robot_models/svh/meshes/h10.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin rpy="0 0 0" xyz="0 0.01313 0" />
+	<geometry>
+          <mesh scale="-1 1 1" filename="../../../robot_models/svh/meshes/h10.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <!-- LENGTH NOT FOUND IN DATASHEET! GUESSED!!! -->
+    <link name="svh_e2">
+      <visual>
+	<origin xyz="0.0007 0 -0.01002" />
+	<geometry>
+          <mesh scale="-1 1 1" filename="../../../robot_models/svh/meshes/h11.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0.0007 0 -0.01002" />
+	<geometry>
+          <mesh scale=" -1 1 1" filename="../../../robot_models/svh/meshes/h11.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <!-- LENGTH NOT FOUND IN DATASHEET! GUESSED!!! -->
+    <link name="svh_e3">
+      <!-- <visual> -->
+      <!-- 	<origin rpy="0 0 0" xyz=" -0.0175 0 0.015" /> -->
+      <!-- 	<geometry> -->
+      <!-- 	  <cylinder length="0.03" radius=0.001" /> -->
+      <!-- 	</geometry> -->
+      <!-- 	<material name="green" /> -->
+      <!-- </visual> -->
+    </link>
+
+    <link name="svh_e">
+    </link>
+
+    <!-- LENGTH NOT FOUND IN DATASHEET! GUESSED, BUT POSITION CALCULATED: E4 = D-G-F!!! -->
+    <link name="svh_e4">
+      <!-- <visual> -->
+      <!-- 	<origin rpy="0 0 0" xyz=" -0.02825 0 0.043" /> -->
+      <!-- 	<geometry> -->
+      <!-- 	  <cylinder length="0.026" radius=0.001" /> -->
+      <!-- 	</geometry> -->
+      <!-- 	<material name="green" /> -->
+      <!-- </visual> -->
+    </link>
+
+    <!-- LENGTH NOT FOUND IN DATASHEET! GUESSED, BUT POSITION CALCULATED: E5 = D-G!!! -->
+    <link name="svh_e5">
+      <!-- <visual> -->
+      <!-- 	<origin rpy="0 0 0" xyz=" -0.00675 0 0.04775" /> -->
+      <!-- 	<geometry> -->
+      <!-- 	  <cylinder length="0.0355" radius=0.001" /> -->
+      <!-- 	</geometry> -->
+      <!-- 	<material name="green" /> -->
+      <!-- </visual> -->
+    </link>
+
+
+    <!-- THUMB LINKS -->
+    <link name="svh_z">
+      <visual>
+	<origin xyz="0 0 0.02442" />
+	<geometry>
+          <mesh scale="1 -1*(1 1" filename="../../../robot_models/svh/meshes/d10.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 0.02442" />
+	<geometry>
+          <mesh scale="1 -1 1" filename="../../../robot_models/svh/meshes/d10.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_virtual_a" />
+    <link name="svh_a">
+      <visual>
+	<geometry>
+          <mesh scale="1 -1 -1" filename="../../../robot_models/svh/meshes/d11.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh scale="1 -1 -1" filename="../../../robot_models/svh/meshes/d11.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_b">
+      <visual>
+	<geometry>
+          <mesh scale="1 -1 -1" filename="../../../robot_models/svh/meshes/d12.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh scale="1 -1 -1" filename="../../../robot_models/svh/meshes/d12.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_c">
+      <visual>
+	<geometry>
+          <mesh scale="1 -1 -1" filename="../../../robot_models/svh/meshes/d13.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh scale="1 -1 -1" filename="../../../robot_models/svh/meshes/d13.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+
+    <!-- INDEX FINGER LINKS -->
+    <link name="svh_virtual_l">
+      <visual>
+	<origin xyz="0 0 0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f10.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f10.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_l">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f11.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f11.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_p">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f12.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f12.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_t">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f13.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f13.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+
+    <!-- MIDDLE FINGER LINKS -->
+    <link name="svh_virtual_k">
+      <visual>
+	<origin xyz="0 0 0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f20.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f20.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_k">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f21.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f21.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_o">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f22.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f22.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_s">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f23.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f23.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+
+    <!-- RING FINGER LINKS -->
+    <link name="svh_virtual_j">
+      <visual>
+	<origin xyz="0 0 -0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f30.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 -0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f30.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_j">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f31.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f31.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_n">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f32.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f32.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_r">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f33.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f33.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+
+    <!-- LITTLE FINGER LINKS -->
+    <link name="svh_virtual_i">
+      <visual>
+	<origin xyz="0 0 -0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f40.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<origin xyz="0 0 -0.01321" />
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f40.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_i">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f41.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f41.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_m">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f42.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f42.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+    <link name="svh_q">
+      <visual>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f43.dae" />
+	</geometry>
+      </visual>
+      <collision>
+	<geometry>
+          <mesh filename="../../../robot_models/svh/meshes/f43.dae" />
+	</geometry>
+      </collision>
+    </link>
+
+
+    <joint name="svh_Thumb_Flexion" type="revolute">
+      <parent link="svh_virtual_a" />
+      <child link="svh_a" />
+      <limit effort="1000.0" lower="0.0" upper="0.9704" velocity="1" />
+      <origin xyz="0 0 0" rpy="0 0 0.9704" />
+      <axis xyz="0 0 -1" />
+    </joint>
+    
+    <joint name="svh_Thumb_Helper" type="fixed">
+      <parent link="svh_z" />
+      <child link="svh_virtual_a" />
+      <origin xyz="0 0 0.04596" rpy="0 -1.5707 3.1416" />
+    </joint>
+
+
+    <!-- BASE_LINE JOINTS -->
+    <joint name="svh_Thumb_Opposition" type="revolute">
+      <parent link="svh_e1" />
+      <child link="svh_z" />
+      <limit effort="1000.0" lower="0.0" upper="0.9879" velocity="1" />
+      <origin xyz="0.01690 0.02626 0" rpy="0 0.2618 1.571" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <!-- JOINT NOT FOR BASE_LINE. BUT WRITTEN DOWN HERE FOR BETTER UX -->
+
+    <joint name="svh_f1" type="fixed">
+      <parent link="svh_e1" />
+      <child link="svh_d" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_f2" type="fixed">
+      <parent link="svh_d" />
+      <child link="svh_h" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_f3" type="fixed">
+      <parent link="svh_h" />
+      <child link="svh_d2" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_f4" type="fixed">
+      <parent link="svh_base_link" />
+      <child link="svh_e1" />
+      <origin xyz="0 -0.01313 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_j5" type="revolute">
+      <parent link="svh_e1" />
+      <child link="svh_e2" />
+      <limit effort="1000.0" lower="0.0" upper="0.98786" velocity="1" />
+      <origin xyz=" -0.01840 0.006 0.0375" rpy="0 0 0" />
+      <axis xyz="0 0 -1" />
+      <mimic joint="svh_Thumb_Opposition" multiplier="1" offset="0" />
+    </joint>
+
+    <joint name="svh_f5" type="fixed">
+      <parent link="svh_e2" />
+      <child link="svh_e3" />
+      <origin xyz="0 -0.0060 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_f6" type="fixed">
+      <parent link="svh_e3" />
+      <child link="svh_e" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_f7" type="fixed">
+      <parent link="svh_e" />
+      <child link="svh_e4" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="svh_f8" type="fixed">
+      <parent link="svh_e" />
+      <child link="svh_e5" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <!-- THUMB JOINTS -->
+    <joint name="svh_j3" type="revolute">
+      <parent link="svh_a" />
+      <child link="svh_b" />
+      <limit effort="1000.0" lower="0.0" upper="0.98506" velocity="1" />
+      <origin xyz="0.0485 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 -1" />
+      <mimic joint="svh_Thumb_Flexion" multiplier="1.01511" offset="0" />
+    </joint>
+
+    <joint name="svh_j4" type="revolute">
+      <parent link="svh_b" />
+      <child link="svh_c" />
+      <limit effort="1000.0" lower="0.0" upper="1.406" velocity="1" />
+      <origin xyz="0.030 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 -1" />
+      <mimic joint="svh_Thumb_Flexion" multiplier="1.44889" offset="0" />
+    </joint>
+
+    <!-- INDEX FINGER JOINTS -->
+    <joint name="svh_Index_Finger_Distal" type="revolute">
+      <parent link="svh_l" />
+      <child link="svh_p" />
+      <limit effort="1000.0" lower="0" upper="1.334" velocity="1" />
+      <origin xyz="0.04804 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <joint name="svh_Index_Finger_Proximal" type="revolute">
+      <parent link="svh_virtual_l" />
+      <child link="svh_l" />
+      <limit effort="1000.0" lower="0.0" upper="0.79849" velocity="1" />
+      <origin xyz="0 0 0" rpy="-1.5707 0 0" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <!-- JOINT Finger_Spread in BASE_LINE section for better UX -->
+    <joint name="svh_j14" type="revolute">
+      <parent link="svh_p" />
+      <child link="svh_t" />
+      <limit effort="1000.0" lower="0" upper="1.394" velocity="1" />
+      <origin xyz="0.026 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+      <mimic joint="svh_Index_Finger_Distal" multiplier="1.0450" offset="0" />
+    </joint>
+
+    <!-- MIDDLE FINGER JOINTS -->
+    <joint name="svh_Middle_Finger_Proximal" type="revolute">
+      <parent link="svh_virtual_k" />
+      <child link="svh_k" />
+      <limit effort="1000.0" lower="0.0" upper="0.79849" velocity="1" />
+      <origin xyz="0 0 0" rpy="-1.5707 0 0" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <joint name="svh_Middle_Finger_Distal" type="revolute">
+      <parent link="svh_k" />
+      <child link="svh_o" />
+      <limit effort="1000.0" lower="0" upper="1.334" velocity="1" />
+      <origin xyz="0.05004 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <joint name="svh_j15" type="revolute">
+      <parent link="svh_o" />
+      <child link="svh_s" />
+      <limit effort="1000.0" lower="0" upper="1.334" velocity="1" />
+      <origin xyz="0.032 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+      <mimic joint="svh_Middle_Finger_Distal" multiplier="1.0454" offset="0" />
+    </joint>
+
+    <!-- RING FINGER JOINTS -->
+    <joint name="svh_Ring_Finger" type="revolute">
+      <parent link="svh_virtual_j" />
+      <child link="svh_j" />
+      <limit effort="1000.0" lower="0.0" upper="0.98175" velocity="1" />
+      <origin xyz="0 0 0" rpy="1.5707 0 0" />
+      <axis xyz="0 0 1" />
+    </joint>
+    
+    <joint name="svh_j12" type="revolute">
+      <parent link="svh_j" />
+      <child link="svh_n" />
+      <limit effort="1000.0" lower="0" upper="1.334" velocity="1" />
+      <origin xyz="0.05004 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+      <mimic joint="svh_Ring_Finger" multiplier="1.3588" offset="0" />
+    </joint>
+
+    <joint name="svh_j16" type="revolute">
+      <parent link="svh_n" />
+      <child link="svh_r" />
+      <limit effort="1000.0" lower="0" upper="1.395" velocity="1" />
+      <origin xyz="0.032 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+      <mimic joint="svh_Ring_Finger" multiplier="1.42093" offset="0" />
+    </joint>
+
+    <!-- PINKY JOINTS -->
+    <joint name="svh_Pinky" type="revolute">
+      <parent link="svh_virtual_i" />
+      <child link="svh_i" />
+      <limit effort="1000.0" lower="0.0" upper="0.98175" velocity="1" />
+      <origin xyz="0 0 0" rpy="1.5707 0 0" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <joint name="svh_j13" type="revolute">
+      <parent link="svh_i" />
+      <child link="svh_m" />
+      <limit effort="1000.0" lower="0" upper="1.334" velocity="1" />
+      <origin xyz="0.04454 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+      <mimic joint="svh_Pinky" multiplier="1.35880" offset="0" />
+    </joint>
+
+    <joint name="svh_j17" type="revolute">
+      <parent link="svh_m" />
+      <child link="svh_q" />
+      <limit effort="1000.0" lower="0" upper="1.3971" velocity="1" />
+      <origin xyz="0.022 0 0" rpy="0 0 0" />
+      <axis xyz="0 0 1" />
+      <mimic joint="svh_Pinky" multiplier="1.42307" offset="0" />
+    </joint>
+
+    <joint name="svh_index_spread" type="revolute">
+      <parent link="svh_d2" />
+      <child link="svh_virtual_l" />
+      <limit effort="1000.0" lower="0.0" upper="0.28833" velocity="1" />
+      <origin xyz="0.025 0 0.110" rpy="0 -1.5707 1.5707" />
+      <axis xyz="0 0 -1" />
+      <mimic joint="svh_Finger_Spread" multiplier="0.5" offset="0" />
+    </joint>
+
+    <joint name="svh_middle_spread_dummy" type="fixed">
+      <parent link="svh_d" />
+      <child link="svh_virtual_k" />
+      <origin xyz="0 0 0.110" rpy="0 -1.5707 1.5707" />
+    </joint>
+
+
+    <joint name="svh_ring_spread" type="revolute">
+      <parent link="svh_e5" />
+      <child link="svh_virtual_j" />
+      <limit effort="1000.0" lower="0.0" upper="0.28833" velocity="1" />
+      <origin xyz=" -0.003855 0 0.0655" rpy="-1.5707 -1.5707 0" />
+      <axis xyz="0 0 -1" />
+      <mimic joint="svh_Finger_Spread" multiplier="0.5" offset="0" />
+    </joint>
+
+    <joint name="svh_Finger_Spread" type="revolute">
+      <parent link="svh_e4" />
+      <child link="svh_virtual_i" />
+      <limit effort="1000.0" lower="0.0" upper="0.5829" velocity="1" />
+      <origin xyz=" -0.025355 0 0.056" rpy="-1.5707 -1.5707 0" />
+      <axis xyz="0 0 -1" />
+    </joint>    
+<!-- </xacro:macro> -->
+</robot>
+

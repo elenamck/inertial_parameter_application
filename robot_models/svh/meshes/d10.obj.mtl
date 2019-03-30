@@ -1,0 +1,21 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v3.1.187496374)
+
+newmtl Metall_Daumen_002-material
+Kd 0.35 0.35 0.35
+Ka 0.001 0.001 0.001
+Ks 0.2 0.2 0.2
+Ke 0 0 0
+d 1
+Ns 50
+illum 2
+
+newmtl Metall_goeldlich_002-material
+Kd 0.831 0.686 0.216
+Ka 0.001 0.001 0.001
+Ks 0.15 0.15 0.15
+Ke 0 0 0
+d 1
+Ns 80
+illum 2
+

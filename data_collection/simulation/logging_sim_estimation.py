@@ -49,8 +49,11 @@ ANGULAR_ACC_KIN_KEY = "sai2::DemoApplication::Panda::kinematics::aaccel";
 EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
 
 INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::controller::phi";
-INERTIAL_PARAMS_LS_KEY = "sai2::DemoApplication::Panda::controller::phiLS";
-INERTIAL_PARAMS_DEBUG_KEY = "sai2::DemoApplication::Panda::controller::phidebug";
+
+JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
+JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
+# INERTIAL_PARAMS_LS_KEY = "sai2::DemoApplication::Panda::controller::phiLS";
+# INERTIAL_PARAMS_DEBUG_KEY = "sai2::DemoApplication::Panda::controller::phidebug";
 
 # data logging frequency
 logger_frequency = 1000.0  # Hz
@@ -71,6 +74,11 @@ while(runloop):
     aaccel    = json.loads(r_server.get(ANGULAR_ACC_KIN_KEY).decode("utf-8"))
     force_v   = json.loads(r_server.get(EE_FORCE_SENSOR_FORCE_KEY).decode("utf-8"))
     phi_RLS   = json.loads(r_server.get(INERTIAL_PARAMS_KEY).decode("utf-8"))
+    q         = json.loads(r_server.get(JOINT_ANGLES_KEY).decode("utf-8"))
+    dq        = json.loads(r_server.get(JOINT_VELOCITIES_KEY).decode("utf-8"))
+    q_6       = q[6];
+    dq_6      = dq[6];
+
     #phi_LS    = json.loads(r_server.get(INERTIAL_PARAMS_LS_KEY).decode("utf-8"))
     #phi_aux   = json.loads(r_server.get(INERTIAL_PARAMS_DEBUG_KEY).decode("utf-8"))
 
@@ -82,6 +90,8 @@ while(runloop):
     " ".join([str(x) for x in aaccel]) + '\t' +\
     " ".join([str(x) for x in force_v]) + '\t' +\
     " ".join([str(x) for x in phi_RLS]) + '\t' +\
+    " ".join([str(x) for x in q_6]) + '\t' +\
+    " ".join([str(x) for x in dq_6]) + '\t' +\
     '\n'
     # " ".join([str(x) for x in phi_LS]) + '\t' +\
     # " ".join([str(x) for x in phi_aux]) + '\t' +\

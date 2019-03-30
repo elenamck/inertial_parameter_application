@@ -17,8 +17,8 @@
      * kalman filter
      * quaternionbased extended kalman filter
      * savitzky golay filter *(part if rocalib, copyright CNRS-UM LIRMM)*
-     * second order lowpass filter *(Chair of Applied Mechanics, TUM)*
-     * FIR filter *(Chair of Applied Mechanics, TUM)*
+     * second order lowpass filter *(copyright Chair of Applied Mechanics, TUM)*
+     * FIR filter *(copyright Chair of Applied Mechanics, TUM)*
   * parameter_estimation: 
     * least square 
     * recursive least square
