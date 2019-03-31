@@ -90,8 +90,8 @@ while(runloop):
     " ".join([str(x) for x in aaccel]) + '\t' +\
     " ".join([str(x) for x in force_v]) + '\t' +\
     " ".join([str(x) for x in phi_RLS]) + '\t' +\
-    " ".join([str(x) for x in q_6]) + '\t' +\
-    " ".join([str(x) for x in dq_6]) + '\t' +\
+    " ".join([str(q_6)]) + '\t' +\
+    " ".join([str(dq_6)]) + '\t' +\
     '\n'
     # " ".join([str(x) for x in phi_LS]) + '\t' +\
     # " ".join([str(x) for x in phi_aux]) + '\t' +\

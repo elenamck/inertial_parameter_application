@@ -18,7 +18,7 @@
 
 using namespace std;
 
-const string world_file = "../../resources/01-panda_force_control/world.urdf";
+const string world_file = "../../resources/01-panda_force_control/world_without_gravity.urdf";
 const string robot_file = "../../resources/01-panda_force_control/panda_arm.urdf";
 const string robot_name = "FRANKA-PANDA";
 const string camera_name = "camera_fixed";
@@ -110,7 +110,7 @@ int main() {
 
     // create window and make it current
     glfwWindowHint(GLFW_VISIBLE, 0);
-    GLFWwindow* window = glfwCreateWindow(windowW, windowH, "SAI2.0 - FRANKA-PANDA", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(windowW, windowH, "SAI2.0 - FRANKA-PANDA-ORIG", NULL, NULL);
 	glfwSetWindowPos(window, windowPosX, windowPosY);
 	glfwShowWindow(window);
     glfwMakeContextCurrent(window);
@@ -228,6 +228,7 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 
 	int dof = robot->dof();
 	Eigen::VectorXd robot_torques = Eigen::VectorXd::Zero(dof);
+	Eigen::VectorXd gravity_torques = Eigen::VectorXd::Zero(dof);
 	redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, robot_torques);
 
 	// create force sensor
@@ -248,10 +249,6 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 		timer.waitForNextLoop();
 		// read torques from Redis
 		redis_client.getEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, robot_torques);
-		sim->setJointTorques(robot_name, robot_torques);
-
-		// update simulation by 1ms
-		sim->integrate(1/sim_freq);
 
 		force_sensor->update(sim);
 		force_sensor->getForceLocalFrame(force);
@@ -262,6 +259,13 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 		sim->getJointPositions(robot_name, robot->_q);
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateModel();
+
+		robot->gravityVector(gravity_torques);
+		sim->setJointTorques(robot_name, robot_torques );
+
+		// update simulation by 1ms
+		sim->integrate(1/sim_freq);
+
 
 		// write joint kinematics to redis
 		redis_client.setEigenMatrixDerived(JOINT_ANGLES_KEY, robot->_q);

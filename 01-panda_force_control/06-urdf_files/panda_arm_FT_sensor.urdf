@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<robot name="panda">
+<robot name="panda-sensor">
 
     <link name="link0">
       <inertial>
@@ -7,11 +7,11 @@
         <mass value="4" />
         <inertia ixx="0.4" iyy="0.4" izz="0.4" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link0.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
 <!--       <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link0.obj"/>
@@ -24,11 +24,11 @@
         <mass value="3" />
         <inertia ixx="0.3" iyy="0.3" izz="0.3" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link1.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
       <!-- <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link1.obj"/>
@@ -41,11 +41,11 @@
         <mass value="3" />
         <inertia ixx="0.3" iyy="0.3" izz="0.3" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link2.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
       <!-- <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link2.obj"/>
@@ -58,11 +58,11 @@
         <mass value="2" />
         <inertia ixx="0.2" iyy="0.2" izz="0.2" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link3.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
       <!-- <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link3.obj"/>
@@ -75,11 +75,11 @@
         <mass value="2" />
         <inertia ixx="0.2" iyy="0.2" izz="0.2" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link4.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
       <!-- <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link4.obj"/>
@@ -92,11 +92,11 @@
         <mass value="2" />
         <inertia ixx="0.2" iyy="0.2" izz="0.2" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link5.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
       <!-- <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link5.obj"/>
@@ -109,30 +109,44 @@
         <mass value="1.5" />
         <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link6.obj"/>
         </geometry>
       </visual>
-      <!-- <collision>
+ -->      <!-- <collision>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link6.obj"/>
         </geometry>
       </collision> -->
     </link>
+<!--         <link name="link7">
+      <inertial>
+        <origin xyz="0 0 0.203" rpy="0 -0 0" />
+        <mass value="1.8" />
+        <inertia ixx="0.1316" iyy="0.1316" izz="0.094" ixy="0" ixz="0" iyz="0" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
+        </geometry>
+      </visual>
+    </link> -->
     <link name="link7">
       <inertial>
         <origin xyz="0 0 0.08" rpy="0 -0 0" />
         <mass value="0.5" />
         <inertia ixx="0.05" iyy="0.05" izz="0.05" ixy="0" ixz="0" iyz="0" />
       </inertial>
-      <visual>
+<!--       <visual>
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
         </geometry>
-      </visual>
+      </visual> -->
     </link>
         <link name="link8">
+      <origin xyz="0 0 0" rpy="0 -0 0" />
       <inertial>
         <origin xyz="0 0 0" rpy="0 -0 0" />
         <mass value="0.00000001" />
@@ -173,10 +187,10 @@
         <mass value="1.3" />
         <inertia ixx="0.04" iyy="0.04" izz="0.04" ixy="0" ixz="0" iyz="0" />
       </inertial>
-            <visual>
-        <origin xyz="0 0 0.05" rpy="0 0 0"/>
+        <visual>
+        <!-- <origin xyz="0 0 0.05" rpy="0 0 0"/> -->
         <geometry>
-          <sphere radius="0.05" />
+          <!-- <sphere radius="0.05" /> -->
         </geometry>
       </visual>
       <collision>
@@ -186,7 +200,8 @@
         </geometry>
       </collision>
     </link>
-    <joint name="joint1" type="revolute">
+
+<joint name="joint1" type="revolute">
       <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973"/>
       <origin rpy="0 0 0" xyz="0 0 0.333"/>
       <parent link="link0"/>
@@ -243,7 +258,6 @@
       <parent link="link6"/>
       <child link="link7"/>
       <axis xyz="0 0 1"/>
-      <calibration falling="80.0" />
       <limit effort="12" lower="-2.8973" upper="2.8973" velocity="2.6100"/>
     </joint>
     <joint name="joint8" type="prismatic">
@@ -254,38 +268,35 @@
       <limit effort="12" lower="-0.0175" upper="3.7525" velocity="2.6100"/>
     </joint>
     <joint name="joint9" type="prismatic">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="link8"/>
       <child link="link9"/>
       <axis xyz="0 1 0"/>
       <limit effort="12" lower="-0.0175" upper="3.7525" velocity="2.6100"/>
     </joint>
     <joint name="joint10" type="prismatic">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="link9"/>
       <child link="link10"/>
       <axis xyz="0 0 1"/>
       <limit effort="12" lower="-0.0175" upper="3.7525" velocity="2.6100"/>
     </joint>
     <joint name="joint11" type="revolute">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="link10"/>
       <child link="link11"/>
       <axis xyz="1 0 0"/>
       <limit effort="12" lower="-0.0175" upper="3.7525" velocity="2.6100"/>
     </joint>
     <joint name="joint12" type="revolute">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="link11"/>
       <child link="link12"/>
       <axis xyz="0 1 0"/>
       <limit effort="12" lower="-0.0175" upper="3.7525" velocity="2.6100"/>
     </joint>  
     <joint name="joint13" type="revolute">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <parent link="link12"/>
       <child link="link13"/>
       <axis xyz="0 0 1"/>
       <limit effort="12" lower="-0.0175" upper="3.7525" velocity="2.6100"/>
     </joint>
+
+
 </robot>

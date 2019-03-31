@@ -20,7 +20,7 @@ using namespace std;
 
 const string world_file = "../../resources/01-panda_force_control/world.urdf";
 const string robot_file = "../../resources/01-panda_force_control/panda_arm_FT_sensor.urdf";
-const string robot_name = "FRANKA-PANDA";
+const string robot_name = "FRANKA-PANDA-SENSOR";
 const string camera_name = "camera_fixed";
 
 // redis keys:
@@ -283,19 +283,29 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 	//-----virtual force sensor---------------------- 
 	//-----FT sensor (panda_arm_FT_sensor.urdf)------
 	Eigen::VectorXd force_virtual = Eigen::VectorXd::Zero(6);
-	double k_f = 1e5;
-	double k_f_z = 1e5;
-	double d_f = 2e2;
-	// double d_f =0;
+	// double k_f = 1e5;
+	// double d_f = 2e2;
+	// double k_f_z = 10e5;
+	// double d_f_z = 6e2;
 
-	// double k_i = 20.0;
-	double k_i= 10;
+	// double k_i = 0;
+	// double k_t = 9e4;
+	// double d_t = 1.8e2; 
+
+	// double k_t_z = 2e3;
+	// double d_t_z = 0.1e2; 
+	double k_f = 1e5;
+	double d_f = 2e2;
+	double k_f_z = 1e5;
+	double d_f_z = 2e2;
+
+	double k_i = 0;
 	double k_t = 1e5;
 	double d_t = 2e2; 
+
 	double k_t_z = 1e5;
 	double d_t_z = 2e2; 
 
-	// double d_t = 0; 
 
 	double F_x = 0;
 	double F_y = 0;
@@ -383,7 +393,7 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 
 		F_x =  - k_f * robot->_q(7) - d_f * robot->_dq(7) - k_i * integrated_pos_error(0);
 		F_y =  - k_f * robot->_q(8) - d_f * robot->_dq(8) - k_i * integrated_pos_error(1);
-		F_z =  - k_f_z * robot->_q(9) - d_f * robot->_dq(9) - k_i * integrated_pos_error(2);
+		F_z =  - k_f_z * robot->_q(9) - d_f_z * robot->_dq(9) - k_i * integrated_pos_error(2);
 		Eigen::Affine3d T_1 = Eigen::Affine3d::Identity();
 		T_1.translation() << robot->_q(7), robot->_q(8), robot->_q(9);
 		Eigen::Vector3d F_aux = Eigen::Vector3d::Zero();

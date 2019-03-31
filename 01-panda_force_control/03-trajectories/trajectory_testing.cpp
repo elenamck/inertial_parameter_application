@@ -332,6 +332,14 @@ t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
 
 			coriolis = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
 		}
+		if (controller_counter%1000==0)
+		{
+			Inertia << phi(4), phi(5), phi(6), phi(5), phi(7), phi(8), phi(6), phi(8), phi(9); 
+			com << phi(1)/phi(0), phi(2)/phi(0), phi(3)/phi(0); 
+    		std::cout << "estimated mass" << phi(0) << "\n";
+    		std::cout << "estimated center of mass" << 	com.transpose() << "\n";
+    		std::cout << "estimated Inertia" << Inertia << "\n";
+		}
 
 
  	 	if(state == GOTO_INITIAL_CONFIG)

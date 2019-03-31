@@ -200,7 +200,7 @@ int main() {
 	//Controllers
 	Vector3d vel_sat = Vector3d(0.4,0.4,0.4);
 	// pos ori controller
-	const string link_name = "link8";
+	const string link_name = "link7";
 	const Vector3d pos_in_link = Vector3d(0,0,0.15);
 	auto pos_task = new Sai2Primitives::PositionTask(robot, link_name, pos_in_link);
 	pos_task->_max_velocity = 0.3;
@@ -362,7 +362,6 @@ int main() {
 
 		if(state == GOTO_INITIAL_CONFIG)
 		{	
-		cout << "still going to init: "  << endl;
 
 			// update tasks models
 			N_prec.setIdentity();
@@ -376,7 +375,6 @@ int main() {
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
 			if(config_error.norm() < 0.1)
 			{
-				cout << "still leaving init: "  << endl;
 
 				joint_task->reInitializeTask();			    
 			    joint_task->_goal_position(6) = M_PI;

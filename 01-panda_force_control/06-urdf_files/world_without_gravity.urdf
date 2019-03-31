@@ -1,11 +1,11 @@
 <?xml version="1.0" ?>
 
-<world name="demo_world" gravity="0.0 0.0 -9.81">
+<world name="demo_world" gravity="0.0 0.0 0">
 
 
-	<robot name="FRANKA-PANDA-SENSOR">
+	<robot name="FRANKA-PANDA">
 		<!-- model node is required -->
-		<model dir="../../resources/01-panda_force_control" path="panda_arm_FT_sensor.urdf" name="panda-sensor" />
+		<model dir="../../resources/01-panda_force_control" path="panda_arm.urdf" name="panda" />
 		<!-- origin node is optional -->
 		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	</robot>

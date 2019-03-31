@@ -10,7 +10,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link0.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link0.obj"/> -->
         </geometry>
       </visual>
 <!--       <collision>
@@ -27,7 +27,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link1.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link1.obj"/> -->
         </geometry>
       </visual>
       <!-- <collision>
@@ -44,7 +44,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link2.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link2.obj"/> -->
         </geometry>
       </visual>
       <!-- <collision>
@@ -61,7 +61,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link3.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link3.obj"/> -->
         </geometry>
       </visual>
       <!-- <collision>
@@ -78,7 +78,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link4.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link4.obj"/> -->
         </geometry>
       </visual>
       <!-- <collision>
@@ -95,7 +95,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link5.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link5.obj"/> -->
         </geometry>
       </visual>
       <!-- <collision>
@@ -112,7 +112,7 @@
       </inertial>
       <visual>
         <geometry>
-          <mesh filename="../../../robot_models/Panda/meshes/link6.obj"/>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link6.obj"/> -->
         </geometry>
       </visual>
       <!-- <collision>
@@ -121,21 +121,35 @@
         </geometry>
       </collision> -->
     </link>
-    <link name="link7">
+<!-- THIS IS THE LINK FROM THE ROBOT MODEL -->
+<!--         <link name="link7">
       <inertial>
         <origin xyz="0 0 0.08" rpy="0 -0 0" />
         <mass value="0.5" />
         <inertia ixx="0.05" iyy="0.05" izz="0.05" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
-        <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
           <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
         </geometry>
       </visual>
+    </link> -->
+<!-- THIS IS THE LINK WITH ADDITIVE INERTIA -->
+    <link name="link7">
+      <inertial>
+        <origin xyz="0 0 0.203" rpy="0 -0 0" />
+        <mass value="1.8" />
+        <inertia ixx="0.1316" iyy="0.1316" izz="0.094" ixy="0" ixz="0" iyz="0" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <!-- <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/> -->
+        </geometry>
+      </visual>
     </link>
 
-     <link name="link8">
+<!--      <link name="link8">
        <inertial>       
         <origin xyz="0.0 0.0 0.09" rpy="0 -0 0" />
         <mass value="1.3" />
@@ -153,7 +167,7 @@
           <sphere radius="0.05" />
         </geometry>
       </collision>
-</link>
+</link> -->
 
     <joint name="joint1" type="revolute">
       <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973"/>
@@ -214,10 +228,10 @@
       <axis xyz="0 0 1"/>
       <limit effort="12" lower="-2.8973" upper="2.8973" velocity="2.6100"/>
     </joint>
- <joint name ="joint8" type="fixed">
+<!--  <joint name ="joint8" type="fixed">
       <origin rpy="0 0 0" xyz="0 0 0.107"/>
       <parent link="link7"/>
       <child link="link8"/>
-</joint> 
+</joint>  -->
   <!-- </xacro:macro> -->
 </robot>

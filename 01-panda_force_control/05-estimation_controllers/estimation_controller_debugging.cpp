@@ -208,7 +208,7 @@ int main() {
 	posori_task->_kp_pos = 100.0;
 	posori_task->_kv_pos = 2.1*sqrt(posori_task->_kp_pos);
 	posori_task->_kp_ori = 100.0;
-	posori_task->_kv_pos = 2.1*sqrt(posori_task->_kp_ori);
+	posori_task->_kv_ori = 2.1*sqrt(posori_task->_kp_ori);
 	posori_task->_velocity_saturation = true;
 	posori_task->_linear_saturation_velocity = vel_sat;
 	posori_task->_angular_saturation_velocity = avel_sat;
