@@ -85,6 +85,11 @@ string ANGULAR_ACC_KIN_KEY;
 #define	 MOVE_XZ_BACK			 14
 #define	 MOVE_YZ_BACK			 15
 #define	 REST 					 16
+#define  POS_1  				 17
+#define  POS_2  				 18
+#define  POS_3  				 19
+#define  POS_4  				 20
+#define  POS_5  				 21
 
 
 
@@ -95,7 +100,7 @@ int main() {
 		JOINT_TORQUES_COMMANDED_KEY = "sai2::DemoApplication::Panda::actuators::fgc";
 		JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
-		EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
+		EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force_des";
 
 		LOCAL_GRAVITY_KEY =  "sai2::DemoApplication::simulation::Panda::g_local";
 		QUATERNION_KEY = "sai2::DemoApplication::simulation::Panda::controller::logging::quaternion";
@@ -198,10 +203,10 @@ int main() {
 
 
 	//Controllers
-	Vector3d vel_sat = Vector3d(0.4,0.4,0.4);
+	Vector3d vel_sat = Vector3d(0.1,0.1,0.1);
 	// pos ori controller
 	const string link_name = "link7";
-	const Vector3d pos_in_link = Vector3d(0,0,0.15);
+	const Vector3d pos_in_link = Vector3d(0,0,0);
 	auto pos_task = new Sai2Primitives::PositionTask(robot, link_name, pos_in_link);
 	pos_task->_max_velocity = 0.3;
 
@@ -212,10 +217,15 @@ int main() {
 	pos_task->_saturation_velocity = vel_sat;
 	VectorXd pos_task_torques = VectorXd::Zero(dof);
 
-	Vector3d pos_des_1 = Vector3d(.5,0.4,0.1);
-	Vector3d pos_des_2 = Vector3d(.5,-0.4,0.6);
-	Vector3d pos_des_3 = Vector3d(.5,-0.4,0.1);
-	Vector3d pos_des_4 = Vector3d(.5,0.4,0.6);
+	// Vector3d pos_des_1 = Vector3d(.5,0.4,0.1);
+	// Vector3d pos_des_2 = Vector3d(.5,-0.4,0.6);
+	// Vector3d pos_des_3 = Vector3d(.5,-0.4,0.1);
+	// Vector3d pos_des_4 = Vector3d(.5,0.4,0.6);
+	Vector3d pos_des_1 = Vector3d(.5,-0.8,0.6);
+	Vector3d pos_des_2 = Vector3d(.5,-0.2,0.1);
+	Vector3d pos_des_3 = Vector3d(.5,0.0,0.6);
+	Vector3d pos_des_4 = Vector3d(.5,0.2,0.1);
+	Vector3d pos_des_5 = Vector3d(.5,0.8,0.6);
 
 	double delta_x = 0.1;
 	double delta_y = 0.1;
@@ -258,6 +268,12 @@ int main() {
 	bool non_linear_case = false;
 	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
 	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
+	// Lambda << 0.014,  0.0, 0.0, 0.0, 0.0, 0.0,
+	// 		    0.0, 0.014, 0.0, 0.0, 0.0, 0.0,
+	//           0.0, 0.0, 0.014, 0.0, 0.0, 0.0,
+	//           0.0, 0.0, 0.0, 0.012, 0.0, 0.0,
+	//           0.014, 0.0, 0.0, 0.0, 0.012, 0.0,
+	//           0.014, 0.0, 0.0, 0.0, 0.0, 0.017;
 
 	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
 	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,7,Lambda);
@@ -360,6 +376,8 @@ int main() {
 
 
 
+		cout << pos_task->_goal_position.transpose()<< endl;
+
 		if(state == GOTO_INITIAL_CONFIG)
 		{	
 
@@ -376,15 +394,16 @@ int main() {
 			if(config_error.norm() < 0.1)
 			{
 
-				joint_task->reInitializeTask();			    
+				joint_task->reInitializeTask();	
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);
+				pos_task->_goal_position = pos_des_1;		    
 			    joint_task->_goal_position(6) = M_PI;
 
-			    state = MOVE_XY;
+			    state = POS_1;
 				
 			}
 		}
-
-
 
 		else if(state == MOVE_FIRST)
 		{
@@ -884,6 +903,140 @@ int main() {
 			    joint_task->_goal_position(6) = -M_PI;
 
 				state = REST;		
+			}
+		}
+				if(state == POS_1)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + pos_task_torques+ coriolis;
+
+			VectorXd config_error = pos_task->_desired_position - pos_task->_current_position;
+			if(config_error.norm() < 0.02)
+			{
+				joint_task->reInitializeTask();			
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);    
+				pos_task->_desired_position = pos_des_2;
+
+			    state = POS_2;
+				
+			}
+		}
+		if(state == POS_2)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + pos_task_torques+ coriolis;
+
+			VectorXd config_error = pos_task->_desired_position - pos_task->_current_position;
+			if(config_error.norm() < 0.02)
+			{
+				joint_task->reInitializeTask();			
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);    
+				pos_task->_desired_position = pos_des_3;
+
+			    state = POS_3;
+				
+			}
+		}
+		if(state == POS_3)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + pos_task_torques+ coriolis;
+
+			VectorXd config_error = pos_task->_desired_position - pos_task->_current_position;
+			if(config_error.norm() < 0.02)
+			{
+				joint_task->reInitializeTask();			
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);    
+				pos_task->_desired_position = pos_des_4;
+
+			    state = POS_4;
+				
+			}
+		}
+		if(state == POS_4)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + pos_task_torques+ coriolis;
+
+			VectorXd config_error = pos_task->_desired_position - pos_task->_current_position;
+			if(config_error.norm() < 0.02)
+			{
+				joint_task->reInitializeTask();			
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);    
+				pos_task->_desired_position = pos_des_5;
+
+			    state = POS_5;
+				
+			}
+		}
+		if(state == POS_5)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			pos_task->updateTaskModel(N_prec);
+			N_prec = pos_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			pos_task->computeTorques(pos_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + pos_task_torques+ coriolis;
+
+			VectorXd config_error = pos_task->_desired_position - pos_task->_current_position;
+			if(config_error.norm() < 0.02)
+			{
+				joint_task->reInitializeTask();			
+				pos_task->reInitializeTask();
+				pos_task->enableVelocitySaturation(vel_sat);    
+
+			    state = GOTO_INITIAL_CONFIG;
+				
 			}
 		}
 

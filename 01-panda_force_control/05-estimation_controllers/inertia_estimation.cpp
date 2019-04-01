@@ -73,6 +73,11 @@ string ANGULAR_ACC_KIN_KEY;
 #define	 INERTIA_Y			     2
 #define  INERTIA_X   	         3
 #define	 REST 					 4
+#define  POS_1  				 5
+#define  POS_2  				 6
+#define  POS_3  				 7
+#define  POS_4  				 8
+#define  POS_5  				 9
 
 
 
@@ -186,8 +191,8 @@ int main() {
 
 
 	//Controllers
-	Vector3d vel_sat = Vector3d(0.5,0.5,0.5);
-	Vector3d avel_sat = Vector3d(M_PI/3.0, M_PI/3.0, M_PI/3.0);
+	Vector3d vel_sat = Vector3d(0.3,0.3,0.3);
+	Vector3d avel_sat = Vector3d(M_PI/5.0, M_PI/5.0, M_PI/5.0);
 
 	// pos ori controller
 	const string link_name = "link7";
@@ -220,10 +225,11 @@ int main() {
 	VectorXd ori_task_torques = VectorXd::Zero(dof);
 
 
-	Vector3d pos_des_1 = Vector3d(.5,0.4,0.1);
-	Vector3d pos_des_2 = Vector3d(.5,-0.4,0.6);
-	Vector3d pos_des_3 = Vector3d(.5,-0.4,0.1);
-	Vector3d pos_des_4 = Vector3d(.5,0.4,0.6);
+	Vector3d pos_des_1 = Vector3d(.2,-0.4,0.5);
+	Vector3d pos_des_2 = Vector3d(.4,-0.3,0.2);
+	Vector3d pos_des_3 = Vector3d(.4,0.0,0.7);
+	Vector3d pos_des_4 = Vector3d(.4,0.3,0.2);
+	Vector3d pos_des_5 = Vector3d(.2,0.4,0.5);
 
 	double delta_x = 0.1;
 	double delta_y = 0.1;
@@ -282,6 +288,18 @@ int main() {
 	Vector3d force_sensed = Vector3d::Zero();
 	Matrix3d inertia_tensor_RLS = Matrix3d::Zero();
 	Vector3d center_of_mass_RLS = Vector3d::Zero();
+
+	int n_av = 0;
+	Vector3d avel_last = Vector3d::Zero();
+	Vector3d accel_last = Vector3d::Zero();
+	Vector3d aaccel_last = Vector3d::Zero();
+	Vector3d g_last = Vector3d::Zero();	
+	VectorXd FT_last = Vector3d::Zero();
+	Vector3d initial_position = Vector3d::Zero();
+	Matrix3d initial_orientation = Matrix3d::Zero();
+	robot->position(initial_position, posori_task->_link_name,pos_in_link);
+	robot->rotation(initial_orientation, posori_task->_link_name);
+
 
 
 
@@ -360,11 +378,28 @@ int main() {
 
 		}
 
+		if(controller_counter%2 == 0)
+		{
+			avel_last = avel_local;
+			accel_last = accel_local;
+			aaccel_last = aaccel_local;
+			g_last = g_local;
+			FT_last = force_moment;
+		}
+		else if(controller_counter%2 !=0)
+		{
+			avel_local = (avel_last+avel_local)/2;
+			accel_local = (accel_last+accel_local)/2;
+			aaccel_local = (aaccel_last+aaccel_local)/2;
+			g_local = (g_last+g_local)/2;
+			force_moment = (FT_last+force_moment)/2;
+			RLS_2 ->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+			phi_RLS = RLS_2->getInertialParameterVector();
+			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
 
-		RLS_2 ->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
-		phi_RLS = RLS_2->getInertialParameterVector();
-		center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-		inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+		}
+
 
 
 		if(controller_counter%1000==0)
@@ -391,10 +426,146 @@ int main() {
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
 			if(config_error.norm() < 0.1)
 			{
-				joint_task->reInitializeTask();			    
+				joint_task->reInitializeTask();		
+				
+				state =POS_1;
+				
+			}
+		}
+		if(state == POS_1)
+		{	
 
+			// update tasks models
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+
+			// compute task torques
+			posori_task->computeTorques(posori_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + posori_task_torques+ coriolis;
+
+			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+			if(config_error.norm() < 0.05)
+			{
+				joint_task->reInitializeTask();			
+				posori_task->reInitializeTask();
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
+				posori_task->_goal_position = pos_des_2;
+				joint_task->_goal_position (6) = M_PI;
 
 			    state = INERTIA_X;
+				
+			}
+		}
+		if(state == POS_2)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			posori_task->computeTorques(posori_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + posori_task_torques+ coriolis;
+
+			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+			if(config_error.norm() < 0.05)
+			{
+				joint_task->reInitializeTask();			
+				posori_task->reInitializeTask();
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
+				posori_task->_goal_position = pos_des_3;
+joint_task->_goal_position (6) = -M_PI;
+			    state = POS_3;
+				
+			}
+		}
+		if(state == POS_3)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			posori_task->computeTorques(posori_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + posori_task_torques+ coriolis;
+
+			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+			if(config_error.norm() < 0.05)
+			{
+				joint_task->reInitializeTask();			
+				posori_task->reInitializeTask();
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
+				posori_task->_goal_position = pos_des_4;
+joint_task->_goal_position (6) = M_PI;
+			    state = POS_4;
+				
+			}
+		}
+		if(state == POS_4)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			posori_task->computeTorques(posori_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + posori_task_torques+ coriolis;
+
+			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+			if(config_error.norm() < 0.05)
+			{
+				joint_task->reInitializeTask();			
+				posori_task->reInitializeTask();
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
+				posori_task->_goal_position = pos_des_5;
+joint_task->_goal_position (6) = -M_PI;
+			    state = POS_5;
+				
+			}
+		}
+		if(state == POS_5)
+		{	
+
+			// update tasks models
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			// compute task torques
+			posori_task->computeTorques(posori_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques + posori_task_torques+ coriolis;
+
+			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+			if(config_error.norm() < 0.05)
+			{
+				joint_task->reInitializeTask();			
+				posori_task->reInitializeTask();
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
+				posori_task->_goal_position = pos_des_1;
+joint_task->_goal_position (6) = M_PI;
+			    state = POS_1;
 				
 			}
 		}
@@ -404,44 +575,29 @@ int main() {
 
 			N_prec.setIdentity();
 			posori_task->updateTaskModel(N_prec);
-			ori_task->updateTaskModel(N_prec);
-
 			N_prec = posori_task->_N;
 			joint_task->updateTaskModel(N_prec);
 
-			double amplitude = 2*M_PI;
-			double periode = 2;
-			double frequency = 2*M_PI/periode;
-			double alpha = 2 * M_PI *controller_counter/control_freq;
-			Vector3d mid_point = Vector3d(0.5,-0.3,0.2);
-			Matrix3d ori_des = Matrix3d::Zero();
-			ori_des << 1,                     0			   ,                    0      			,
-					   0,cos(frequency*timer.elapsedTime()), -sin(frequency*timer.elapsedTime()),
-					   0,sin(frequency*timer.elapsedTime()),  cos(frequency*timer.elapsedTime());
-
-
-			// posori_task->_goal_position = mid_point + amplitude * Vector3d(0, cos(frequency*timer.elapsedTime()), sin(frequency*timer.elapsedTime()));
-			posori_task->_goal_position(0) = x_des;
-			//posori_task->_desired_velocity = amplitude * Vector3d(cos(frequency*timer.elapsedTime()), 0,0);
-
-			// posori_task->_desired_velocity = amplitude * frequency * Vector3d(0,-  sin(frequency*timer.elapsedTime()),  cos(frequency*timer.elapsedTime()));
-
-			// posori_task->_goal_position = mid_point + amplitude * Vector3d(0, cos(frequency*timer.elapsedTime()), 0);
-			// posori_task->_desired_orientation = ori_des;
-			// posori_task->_desired_velocity = amplitude * frequency * Vector3d(0,-  sin(frequency*timer.elapsedTime()), 0);
-			
-			ori_task->_desired_angular_velocity = R_link*Vector3d(amplitude*cos(frequency*timer.elapsedTime()), 0,0);
-			// cout << "desired angular velocity" << ori_task->_desired_angular_velocity.transpose() << endl;
-			// cout << "current angular velocity" << ori_task->_current_angular_velocity.transpose() << endl;
+			double circle_radius = 0.00002*controller_counter;
+			double circle_freq = 0.25;
+			double time = controller_counter/control_freq;
+			Eigen::Matrix3d R;
+			double theta = M_PI/2.0;
+			R << 1 , 	0, 			 0,
+				 0 , cos(theta), -sin(theta),
+				 0 , sin(theta),   cos(theta) ;
+				
+			posori_task->_desired_position = initial_position + circle_radius * Eigen::Vector3d( sin(2*M_PI*circle_freq*time), cos(2*M_PI*circle_freq*time), 0.0);
+			posori_task->_desired_velocity = 2*M_PI*circle_freq*circle_radius*Eigen::Vector3d(cos(2*M_PI*circle_freq*time),  -sin(2*M_PI*circle_freq*time), 0.0);
+			posori_task->_desired_orientation = R.transpose()*initial_orientation;
 
 			// compute task torques
 			posori_task->computeTorques(posori_task_torques);
-			ori_task->computeTorques(ori_task_torques);
 
 
 			joint_task->computeTorques(joint_task_torques);
 
-			command_torques = joint_task_torques  + posori_task_torques + coriolis + ori_task_torques;
+			command_torques = joint_task_torques  + posori_task_torques + coriolis ;
 			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
 			if(config_error.norm() < 0.1)
 			{	
@@ -546,18 +702,19 @@ int main() {
 
 		else if(state == REST)
 		{
+			joint_task->_goal_position = desired_initial_configuration * M_PI* sin(timer.elapsedTime());
 			N_prec.setIdentity();
-			posori_task->updateTaskModel(N_prec);
-			
-			N_prec = posori_task->_N;
 			joint_task->updateTaskModel(N_prec);
-			posori_task->computeTorques(posori_task_torques);
+			
+			// N_prec = posori_task->_N;
+			// joint_task->updateTaskModel(N_prec);
+			// posori_task->computeTorques(posori_task_torques);
 			// ori_task->computeTorques(ori_task_torques);
 
 
 			joint_task->computeTorques(joint_task_torques);
 
-			command_torques = joint_task_torques  + posori_task_torques + coriolis;
+			command_torques = joint_task_torques  + coriolis;
 		}
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);

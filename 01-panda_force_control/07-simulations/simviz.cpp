@@ -15,8 +15,11 @@
 #include <iostream>
 #include <string>
 #include <signal.h>
+#include <cmath>
 
 using namespace std;
+
+using namespace Eigen;
 
 const string world_file = "../../resources/01-panda_force_control/world.urdf";
 const string robot_file = "../../resources/01-panda_force_control/panda_arm_FT_sensor.urdf";
@@ -34,6 +37,8 @@ const string EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::force_sesnor::force_m
 const string DESIRED_POS_KEY = "sai2::DemoApplication::Panda::controller::logging::desired_position";
 const string CURRENT_POS_KEY = "sai2::DemoApplication::Panda::controller::logging::current_position";
 const string FORCE_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
+const string FORCE_VIRTUAL_DES_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force_des";
+
 const string JOINT_POS_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_q";
 const string JOINT_VEL_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_dq";
 // const string ANGULAR_VEL_KEY = "sai2::DemoApplication::Panda::simulation::angular_vel";
@@ -258,14 +263,17 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 	Eigen::VectorXd gravity_torques = Eigen::VectorXd::Zero(dof);
 	Eigen::VectorXd joint_pos_virtual = Eigen::VectorXd::Zero(6);
 	Eigen::VectorXd joint_vel_virtual = Eigen::VectorXd::Zero(6);
+	Vector3d F_des = Vector3d::Zero();
+	Vector3d T_des = Vector3d::Zero();
+	VectorXd FT_des = VectorXd::Zero(6);
 
-	// Eigen::Vector3d accel = Eigen::Vector3d::Zero(); //object linear acceleration in base frame
-	// Eigen::Vector3d avel = Eigen::Vector3d::Zero(); //object angular velocity in base frame
-	// Eigen::Vector3d aaccel = Eigen::Vector3d::Zero(); //object angular acceleration in base frame
-	// Eigen::Vector3d accel_local = Eigen::Vector3d::Zero(); // object linear acceleration in sensor frame
-	// Eigen::Vector3d aaccel_local = Eigen::Vector3d::Zero(); // object angular acceleration in sensor frame
-	// Eigen::Vector3d avel_local = Eigen::Vector3d::Zero(); //object angular velocity in sensor frame
-	// Eigen::Vector3d g_local = Eigen::Vector3d::Zero(); //gravity vector in sensor frame
+	Eigen::Vector3d accel = Eigen::Vector3d::Zero(); //object linear acceleration in base frame
+	Eigen::Vector3d avel = Eigen::Vector3d::Zero(); //object angular velocity in base frame
+	Eigen::Vector3d aaccel = Eigen::Vector3d::Zero(); //object angular acceleration in base frame
+	Eigen::Vector3d accel_local = Eigen::Vector3d::Zero(); // object linear acceleration in sensor frame
+	Eigen::Vector3d aaccel_local = Eigen::Vector3d::Zero(); // object angular acceleration in sensor frame
+	Eigen::Vector3d avel_local = Eigen::Vector3d::Zero(); //object angular velocity in sensor frame
+	Eigen::Vector3d g_local = Eigen::Vector3d::Zero(); //gravity vector in sensor frame
 	Eigen::VectorXd integrated_pos_error = Eigen::VectorXd::Zero(6);
 
 
@@ -294,17 +302,17 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 
 	// double k_t_z = 2e3;
 	// double d_t_z = 0.1e2; 
-	double k_f = 1e5;
-	double d_f = 2e2;
-	double k_f_z = 1e5;
-	double d_f_z = 2e2;
+	double k_f = 5e4;
+	double d_f = 850;
+	double k_f_z = k_f;
+	double d_f_z = d_f;
 
-	double k_i = 0;
-	double k_t = 1e5;
-	double d_t = 2e2; 
+	double k_i = 10;
+	double k_t = 5e2;
+	double d_t = 50; 
 
-	double k_t_z = 1e5;
-	double d_t_z = 2e2; 
+	double k_t_z = k_t;
+	double d_t_z = d_t; 
 
 
 	double F_x = 0;
@@ -367,19 +375,32 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 		sim->getJointVelocities(robot_name, robot->_dq);
 		robot->updateModel();
 
-		// robot->linearAcceleration(accel,"link7", Eigen::Vector3d::Zero());
-		// robot->angularAcceleration(aaccel,"link7");
-		// robot->angularVelocity(avel,"link7");
+		robot->linearAcceleration(accel,"link13", Eigen::Vector3d::Zero());
+		robot->angularAcceleration(aaccel,"link13");
+		robot->angularVelocity(avel,"link13");
 		// //compute Transformation base to sensor frame in base coordinates
-		// Eigen::Matrix3d R_link;
-		// robot->rotation(R_link,"link7"); 
+		Eigen::Matrix3d R_link;
+		robot->rotation(R_link,"link13"); 
 		// //get object acc in sensor frame
-		// accel_local = R_link.transpose()*accel;
-		// aaccel_local = R_link.transpose()*aaccel;
-		// //get object velocity in sensor frame
-		// avel_local = R_link.transpose()*avel;
+		accel_local = R_link.transpose()*accel;
+		aaccel_local = R_link.transpose()*aaccel;
+		//get object velocity in sensor frame
+		avel_local = R_link.transpose()*avel;
 		// // get gravity in base frame and transform to sensor frame
-		// g_local = R_link.transpose()*robot->_world_gravity;
+		g_local = R_link.transpose()*robot->_world_gravity;
+		double m_object = 1.3;
+		Vector3d com_object = Vector3d(0,0,0.09);
+		Matrix3d inertia_in_sensor_frame = Matrix3d::Zero();
+		inertia_in_sensor_frame << 0.014742, 	0	,	0, 
+									0	, 0.014742	,   0,
+									0   ,   0   , 0.004212;  
+
+		F_des = m_object*accel_local - m_object * g_local + m_object * Sai2Model::CrossProductOperator(aaccel_local)*com_object + 
+				m_object* Sai2Model::CrossProductOperator(avel_local)*(Sai2Model::CrossProductOperator(avel_local)*com_object);
+
+		T_des = inertia_in_sensor_frame*aaccel_local + Sai2Model::CrossProductOperator(avel_local)*(inertia_in_sensor_frame*avel_local) 
+				+ m_object*Sai2Model::CrossProductOperator(com_object)*accel_local- m_object * Sai2Model::CrossProductOperator(com_object) * g_local;
+		FT_des << F_des, T_des;
 
 		//get Forces and moments from virtual joints
 		//-----F sensor (panda_arm_force_sensor.urdf)------
@@ -424,12 +445,18 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 
 		joint_pos_virtual << robot->_q(7), robot->_q(8), robot->_q(9), robot->_q(10), robot->_q(11), robot->_q(12);
 		joint_vel_virtual << robot->_dq(7), robot->_dq(8), robot->_dq(9), robot->_dq(10), robot->_dq(11), robot->_dq(12);
-
+		VectorXd ft_error = VectorXd::Zero(7);
+		for(int i=0; i<6; i++)
+		{
+			ft_error(i) = sqrt((force_virtual(i)-FT_des(i))*(force_virtual(i)-FT_des(i)));
+		} 
 		if(sim_counter%2000==0)
 		{
 			cout << "current force/torque: " << force_virtual.transpose() << endl;
-			cout << "current displacements: " << joint_pos_virtual.transpose() << endl;
-			cout << "current virtual velocities: " << joint_pos_virtual.transpose() << endl;
+			cout << "desired force/torque: " << FT_des.transpose() << endl; 
+			// cout << "current displacements: " << joint_pos_virtual.transpose() << endl;
+			// cout << "current virtual velocities: " << joint_pos_virtual.transpose() << endl;
+			cout << "current ft_error: " << ft_error.transpose() << endl;
 		}
 		
 
@@ -438,6 +465,8 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 		redis_client.setEigenMatrixDerived(JOINT_VELOCITIES_KEY, joint_velocities);
 		redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, -force_moment);
 		redis_client.setEigenMatrixDerived(FORCE_VIRTUAL_KEY, force_virtual);
+		redis_client.setEigenMatrixDerived(FORCE_VIRTUAL_DES_KEY, FT_des);
+
 		redis_client.setEigenMatrixDerived(JOINT_POS_VIRTUAL_KEY, joint_pos_virtual);
 		redis_client.setEigenMatrixDerived(JOINT_VEL_VIRTUAL_KEY, joint_vel_virtual);
 		// redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);

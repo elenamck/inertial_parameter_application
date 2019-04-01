@@ -18,7 +18,7 @@ INCLUDE_DIRECTORIES (
 #add subdirectories
 
 # add_subdirectory(01-kalman_filters)
-# add_subdirectory(02-adaptive_filters)
+add_subdirectory(02-adaptive_filters)
 add_subdirectory(03-trajectories)
 # add_subdirectory(04-SVH_hand)
 add_subdirectory(05-estimation_controllers)
