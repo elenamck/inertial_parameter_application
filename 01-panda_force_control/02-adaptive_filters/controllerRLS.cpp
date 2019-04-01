@@ -102,7 +102,7 @@ int main() {
 		JOINT_TORQUES_COMMANDED_KEY = "sai2::DemoApplication::Panda::actuators::fgc";
 		JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
-		EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::force_sesnor::force_moment";
+		EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
 		DESIRED_POS_KEY = "sai2::DemoApplication::Panda::controller::logging::desired_position";
 		CURRENT_POS_KEY = "sai2::DemoApplication::Panda::controller::logging::current_position";
 		FORCE_VIRTUAL_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
@@ -315,7 +315,6 @@ t_start = std::chrono::high_resolution_clock::now();
    		//std::cout << "Force virtual: " << force_virtual.transpose() << "\n";
 t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
 
-std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 
 		// update robot model
 		if(flag_simulation)
@@ -352,8 +351,6 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 		double circle_radius = 0.00002*n;
 		double circle_freq = 0.25;
 		double time = controller_counter/control_freq;
-		cout << "controller_counter: \n" << controller_counter << endl;
-		cout << "time: \n" << time << endl;
 
 
 
@@ -365,13 +362,10 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 			 	      0     , 1 ,     0     ,
 			     -sin(theta) , 0 , cos(theta);
 			posori_task2->_desired_position = initial_position + circle_radius * Eigen::Vector3d(0.0, sin(2*M_PI*circle_freq*time), cos(2*M_PI*circle_freq*time));
-			cout << "desired_position: \n" <<  posori_task2->_desired_position.transpose() << endl;
 
 			posori_task2->_desired_velocity = 2*M_PI*circle_freq*circle_radius*Eigen::Vector3d(0.0, cos(2*M_PI*circle_freq*time), -sin(2*M_PI*circle_freq*time));
-			cout << "_desired_velocity: \n" <<  posori_task2->_desired_velocity.transpose() << endl;
 			
 			posori_task2->_desired_orientation = R.transpose()*initial_orientation;
-			cout << "desired_orientation: \n" <<  posori_task2->_desired_orientation << endl;
 
 			n++;
 		}
@@ -425,7 +419,6 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 		posori_task2->computeTorques(posori_task2_torques);
 
 		command_torques = posori_task2_torques + coriolis;
-		cout << "command_torques: \n" << command_torques.transpose() << endl;
 
 
 		A = GetDataMatrixFT(accel_local, avel_local, aaccel_local,  g_local);
@@ -574,6 +567,14 @@ std::cout << "time elapsed :" << t_elapsed.count() << std::endl;
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
 		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
 
+		if(controller_counter%1000==0)
+		{
+    		Inertia << phi(4), phi(5), phi(6), phi(5), phi(7), phi(8), phi(6), phi(8), phi(9); 
+			com << phi(1)/phi(0), phi(2)/phi(0), phi(3)/phi(0); 
+			cout << "the estimated mass is: \n" << phi(0) << endl;
+		    cout << "the estimated center of mass is: \n" << com.transpose() << endl;
+		    cout << "the estimated inertia tensor is: \n" << Inertia << endl;
+		}
 
 		controller_counter++;
 
