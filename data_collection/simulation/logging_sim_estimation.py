@@ -52,11 +52,18 @@ INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::controller::phi";
 
 JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
+
+EE_DESIRED_FORCE_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force_des";
+
+JOINT_ANGLE_INPUTS_KEY = "sai2::DemoApplication::Panda::desired::q";
+JOINT_VELOCITIES_INPUTS_KEY ="sai2::DemoApplication::Panda::desired::dq";
+
+
 # INERTIAL_PARAMS_LS_KEY = "sai2::DemoApplication::Panda::controller::phiLS";
 # INERTIAL_PARAMS_DEBUG_KEY = "sai2::DemoApplication::Panda::controller::phidebug";
 
 # data logging frequency
-logger_frequency = 1000.0  # Hz
+logger_frequency = 500  # Hz
 logger_period = 1.0/logger_frequency
 t_init = time.time()
 t = t_init
@@ -76,8 +83,8 @@ while(runloop):
     phi_RLS   = json.loads(r_server.get(INERTIAL_PARAMS_KEY).decode("utf-8"))
     q         = json.loads(r_server.get(JOINT_ANGLES_KEY).decode("utf-8"))
     dq        = json.loads(r_server.get(JOINT_VELOCITIES_KEY).decode("utf-8"))
-    q_6       = q[6];
-    dq_6      = dq[6];
+    q_des     = json.loads(r_server.get(JOINT_ANGLE_INPUTS_KEY).decode("utf-8"))
+    dq_des     = json.loads(r_server.get(JOINT_VELOCITIES_INPUTS_KEY).decode("utf-8"))
 
     #phi_LS    = json.loads(r_server.get(INERTIAL_PARAMS_LS_KEY).decode("utf-8"))
     #phi_aux   = json.loads(r_server.get(INERTIAL_PARAMS_DEBUG_KEY).decode("utf-8"))
@@ -90,8 +97,10 @@ while(runloop):
     " ".join([str(x) for x in aaccel]) + '\t' +\
     " ".join([str(x) for x in force_v]) + '\t' +\
     " ".join([str(x) for x in phi_RLS]) + '\t' +\
-    " ".join([str(q_6)]) + '\t' +\
-    " ".join([str(dq_6)]) + '\t' +\
+    " ".join([str(x) for x in q]) + '\t' +\
+    " ".join([str(x)  for x in dq]) + '\t' +\
+    " ".join([str(x) for x in q_des]) + '\t' +\
+    " ".join([str(x)  for x in dq_des]) + '\t' +\
     '\n'
     # " ".join([str(x) for x in phi_LS]) + '\t' +\
     # " ".join([str(x) for x in phi_aux]) + '\t' +\
