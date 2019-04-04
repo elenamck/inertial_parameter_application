@@ -25,6 +25,7 @@ LeastSquare::LeastSquare(bool lin)
 	_f_contact.setZero(); 
 	_n_measurements = 0;
 	_linear_case = lin;
+	_A_conditioning.setZero(10,6);
 }
 
 void LeastSquare::addData(const Eigen::VectorXd& force_measurment, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local)
@@ -47,6 +48,7 @@ void LeastSquare::addData(const Eigen::VectorXd& force_measurment, const Eigen::
 
 	updateData();
 }
+
 
 
 void LeastSquare::updateData()
@@ -222,6 +224,55 @@ Eigen::VectorXd LeastSquare::computeContactForceTorque(const Eigen::VectorXd& fo
 
 	return _ft_contact;
 }
+
+void LeastSquare::addDataConditioning(const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local)
+{
+	_accel_local  = accel_local;
+	_avel_local   = avel_local;
+	_aaccel_local = aaccel_local;
+	_g_local 	  = g_local;
+
+	getDataMatrix(_A_curr); 
+
+	updateDataConditioning();
+}
+
+void LeastSquare::updateDataConditioning()
+{	
+	_n_measurements++;
+
+	if(_n_measurements==1)
+	{
+		_A_conditioning = _A_curr.transpose();
+	}
+	else
+	{
+		Eigen::MatrixXd A_temp = _A_conditioning;
+
+		_A_conditioning.resize(10*_n_measurements,6);
+
+		_A_conditioning.topRows((_n_measurements-1)*10) = A_temp;
+
+		_A_conditioning.bottomRows(10) = _A_curr.transpose();
+	}
+}
+
+void LeastSquare::initConditioning()
+{
+	_A_conditioning.resize(10,6);
+	_A_conditioning.setZero(10,6);
+	_n_measurements = 0;
+}
+
+Eigen::MatrixXd LeastSquare::getDataMatrixConditioning()
+{
+	return _A_conditioning;
+}
+Eigen::MatrixXd LeastSquare::getCorrelationMatrixConditioning()
+{
+	return _A_conditioning.transpose() * _A_conditioning;
+}
+
 } /* namespace ParameterEstimation */
 
 

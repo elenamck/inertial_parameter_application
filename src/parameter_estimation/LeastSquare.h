@@ -76,6 +76,11 @@ public:
 
 	Eigen::VectorXd computeContactForceTorque(const Eigen::VectorXd& force_torque_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
 
+	void addDataConditioning(const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
+	void updateDataConditioning();
+	void initConditioning();
+	Eigen::MatrixXd getDataMatrixConditioning();
+	Eigen::MatrixXd getCorrelationMatrixConditioning();
 
 private:
 
@@ -95,6 +100,7 @@ private:
 	Eigen::VectorXd _phi_lin; 		//estimated inertial parameter vector
 	Eigen::VectorXd _ft_contact; 	//computed contact force
 	Eigen::Vector3d _f_contact; 	//computed contact force
+	Eigen::MatrixXd _A_conditioning;
 	int _n_measurements;
 	bool _linear_case;				//flag for linear case
 };

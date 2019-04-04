@@ -95,9 +95,11 @@ public:
 	Eigen::Vector3d computeContactForce(const Eigen::Vector3d& force_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
 
 	Eigen::VectorXd computeContactForceTorque(const Eigen::VectorXd& force_torque_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
-	
+	//Need to be called after addData()
 	Eigen::MatrixXd getCurrentDataMatrix();
 	Eigen::VectorXd getCurrentInputVector();
+	Eigen::MatrixXd getCurrentDataMatrixStacked();
+	Eigen::VectorXd getCurrentInputVectorStacked();
 
 
 private:

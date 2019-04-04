@@ -351,7 +351,7 @@ Eigen::VectorXd RecursiveLeastSquare::getInertialParameterVector()
 	}
 }
 
-Eigen::MatrixXd RecursiveLeastSquare::getCurrentDataMatrix()
+Eigen::MatrixXd RecursiveLeastSquare::getCurrentDataMatrixStacked()
 {
 	if(_linear_case==false)
 	{
@@ -362,7 +362,7 @@ Eigen::MatrixXd RecursiveLeastSquare::getCurrentDataMatrix()
 		return _A_lin;
 	}
 }
-Eigen::VectorXd RecursiveLeastSquare::getCurrentInputVector()
+Eigen::VectorXd RecursiveLeastSquare::getCurrentInputVectorStacked()
 {
 	if(_linear_case==false)
 	{
@@ -371,6 +371,29 @@ Eigen::VectorXd RecursiveLeastSquare::getCurrentInputVector()
 	else
 	{
 		return _F;
+	}
+}
+
+Eigen::MatrixXd RecursiveLeastSquare::getCurrentDataMatrix()
+{
+	if(_linear_case==false)
+	{
+		return _A_curr;
+	}
+	else
+	{
+		return _A_lin_curr;
+	}
+}
+Eigen::VectorXd RecursiveLeastSquare::getCurrentInputVector()
+{
+	if(_linear_case==false)
+	{
+		return _ft;
+	}
+	else
+	{
+		return _f;
 	}
 }
 
