@@ -22,5 +22,7 @@
   * parameter_estimation: 
     * least square 
     * recursive least square
+  * trajectories:
+    * sinusoidal joint space
 
 
