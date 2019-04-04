@@ -28,6 +28,11 @@ SET(FILTERS_SOURCE
  	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF.cpp
  	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF2.cpp
 	)
+
+# add inertial parameter estimation
+SET(TRAJECTORIES_SOURCE
+ 	${PROJECT_SOURCE_DIR}/src/trajectories/JointSpaceSinusodial.cpp
+	)
 # add header files 
 SET(INERTIAL_PARAMETER_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/src)
 
@@ -39,6 +44,7 @@ INCLUDE_DIRECTORIES(${INERTIAL_PARAMETER_INCLUDE_DIRS}
 ADD_LIBRARY (inertial_parameter_app STATIC
 	${PARAMETER_ESTIMATION_SOURCE}
 	${FILTERS_SOURCE}
+	${TRAJECTORIES_SOURCE}
 	)
 
 set(INERTIAL_PARAMETER_LIBRARIES
