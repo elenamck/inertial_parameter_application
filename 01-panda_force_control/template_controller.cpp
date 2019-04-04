@@ -16,7 +16,7 @@ using namespace std;
 using namespace Eigen;
 
 const string robot_file = "../resources/01-panda_force_control/panda_arm.urdf";
-const std::string robot_name = "FRANKA-PANDA";
+const string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
@@ -26,18 +26,18 @@ const bool flag_simulation = false;
 const bool inertia_regularization = true;
 // redis keys:
 // - write:
-std::string JOINT_TORQUES_COMMANDED_KEY;
+string JOINT_TORQUES_COMMANDED_KEY;
 // - read:
-std::string JOINT_ANGLES_KEY;
-std::string JOINT_VELOCITIES_KEY;
-std::string EE_FORCE_SENSOR_FORCE_KEY;
+string JOINT_ANGLES_KEY;
+string JOINT_VELOCITIES_KEY;
+string EE_FORCE_SENSOR_FORCE_KEY;
 
 
 
 // - model
-std::string MASSMATRIX_KEY;
-std::string CORIOLIS_KEY;
-std::string ROBOT_GRAVITY_KEY;
+string MASSMATRIX_KEY;
+string CORIOLIS_KEY;
+string ROBOT_GRAVITY_KEY;
 
 int main() {
 	if(flag_simulation)
@@ -67,7 +67,7 @@ int main() {
 	bias.open("FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
-        std::cout << "Can't open Data!\n";
+        cout << "Can't open Data!\n";
     }
     else
     {
@@ -101,6 +101,7 @@ int main() {
 	int dof = robot->dof();
 	VectorXd command_torques = VectorXd::Zero(dof);
 	VectorXd coriolis = VectorXd::Zero(dof);
+	MatrixXd N_prec = MatrixXd::Identity(dof,dof);
 
 		// create a loop timer
 	double control_freq = 1000;
@@ -122,7 +123,7 @@ int main() {
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
 		force_moment -= force_torque_bias;
-		//std::cout << "FT calibrated" << force_moment.transpose() << endl; 
+		//cout << "FT calibrated" << force_moment.transpose() << endl; 
 	
 		
 		// update robot model
@@ -157,10 +158,10 @@ int main() {
     redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 
     double end_time = timer.elapsedTime();
-    std::cout << "\n";
-    std::cout << "Loop run time  : " << end_time << " seconds\n";
-    std::cout << "Loop updates   : " << timer.elapsedCycles() << "\n";
-    std::cout << "Loop frequency : " << timer.elapsedCycles()/end_time << "Hz\n";
+    cout << "\n";
+    cout << "Loop run time  : " << end_time << " seconds\n";
+    cout << "Loop updates   : " << timer.elapsedCycles() << "\n";
+    cout << "Loop frequency : " << timer.elapsedCycles()/end_time << "Hz\n";
 
     return 0;
 
