@@ -27,6 +27,7 @@ SET(FILTERS_SOURCE
  	${PROJECT_SOURCE_DIR}/src/filters/KalmanFilter.cpp
  	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF.cpp
  	${PROJECT_SOURCE_DIR}/src/filters/QuaternionBasedEKF2.cpp
+ 	${PROJECT_SOURCE_DIR}/src/filters/MeanFilter.cpp
 	)
 
 # add inertial parameter estimation

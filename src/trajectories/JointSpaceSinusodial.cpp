@@ -88,14 +88,9 @@ void JointSpaceSinusodial::update(int counter)
 			_q(i) += _M_a(j,i) * sin(_arg*(j+1)) + _M_b(j,i) * cos(_arg*(j+1));
 			_dq(i) += _M_a(j,i) * _arg_diff * (j+1) * cos(_arg*(j+1)) - _M_b(j,i) * _arg_diff * (j+1) * sin(_arg*(j+1));
 			_ddq(i) += - _M_a(j,i) * _arg_diff_diff * (j+1)*(j+1) * sin(_arg*(j+1)) - _M_b(j,i) * _arg_diff_diff * (j+1)*(j+1) * cos(_arg*(j+1));
-			//std::cout << "for i: " << i << "and for j: " << j << "a: " << _M_a(j,i) << "b: " << _M_b(j,i) << std::endl;
-			//std::cout << "the desired joint angles are: " << _q.transpose()<< std::endl;
+ 
 		} 
 	}
-	// std::cout << "for timestep: " << _k << " the desired joint angles are: " << _q.transpose()<< std::endl;
-	// std::cout << "for timestep: " << _k << " the desired joint velcities are: " << _q.transpose()<< std::endl;
-	// std::cout << "for timestep: " << _k << " the desired joint accelerations are: " << _q.transpose()<< std::endl;
-
 }
 
 Eigen::VectorXd JointSpaceSinusodial::getJointAngles()

@@ -81,6 +81,8 @@ public:
 	void initConditioning();
 	Eigen::MatrixXd getDataMatrixConditioning();
 	Eigen::MatrixXd getCorrelationMatrixConditioning();
+	Eigen::MatrixXd getCurrentDataMatrixStacked();
+	Eigen::VectorXd getCurrentInputVectorStacked();
 
 private:
 

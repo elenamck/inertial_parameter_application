@@ -59,7 +59,7 @@ const string link_name = "link13";
 
 //-----F sensor (panda_arm_force_sensor.urdf)------
 //const string link_name = "link10";
-const Eigen::Vector3d pos_in_link = Eigen::Vector3d(0,0,0.15);
+const Eigen::Vector3d pos_in_link = Eigen::Vector3d(0,0,0);
 
 bool runloop = false;
 void sighandler(int){runloop = false;}

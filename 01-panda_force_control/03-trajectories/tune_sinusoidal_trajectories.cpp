@@ -80,12 +80,12 @@ int main() {
 	std::random_device rd;
 	static std::mt19937 gen(rd());  //here you could also set a seed
 	// static std::normal_distribution<double> dis(0.0,1.0);
-	static std::uniform_real_distribution<double> dis(-.7, .7);
+	static std::uniform_real_distribution<double> dis(-0.8, 0.8);
 
-	int axis = 5; 
+	int axis = 4; 
 	int N = 3; 
 	double w_s = 500;
-	double w_f = 0.628; 
+	double w_f = 0.8; 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
 
@@ -94,9 +94,11 @@ int main() {
 
 	VectorXd q_lim_max_all = VectorXd::Zero(7);
 	VectorXd q_lim_min_all = VectorXd::Zero(7);
-	q_lim_max_all <<  2.8973,  1.7628,  2.8973, -0.0698,  2.8973,  3.7525,  2.8973;	
-	q_lim_min_all << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
+	// q_lim_max_all <<  2.8973,  1.7628,  2.8973, -0.0698,  2.8973,  3.7525,  2.8973;	
+	// q_lim_min_all << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
 
+	q_lim_max_all <<  2.7,  1.6,  2.7, 0.1,  2.7,  3.6,  2.7;	
+	q_lim_min_all << -2.7, -1.6, -2.7, -2.9, -2.7, 0.1, -2.7;
 	VectorXd dq_lim_max_all = VectorXd::Zero(7);
 	dq_lim_max_all <<  2.1750, 2.1750, 2.1750, 2.1750,  2.6100, 2.6100,  2.6100;	
 
@@ -161,9 +163,6 @@ int main() {
 
 		trajectory_counter++;
 
-		cout << "q: " << q.transpose() << endl;	
-		cout << "q_max: " << q_lim_max.transpose() << endl;	
-		cout << "q_min: " << q_lim_min.transpose() << endl;	
 		//check conditions
 		bool conditions = (check_limits_max(q, q_lim_max, axis)) || (check_limits_min(q, q_lim_min, axis)) || (check_limits_max(dq, dq_lim_max, axis)) || (check_limits_max(ddq, ddq_lim_max, axis)) || (q(axis-2) < q_lim_min(axis-2));
 		// if((q(axis-2)< -0.0175)||(q(axis-2)> 3.7525) || (q(axis-4)< -3.0718)||(q(axis-4)>-0.0698))
@@ -199,10 +198,24 @@ int main() {
 		//check if trajectory finished
 		if((trajectory_counter/w_s) >= 2*M_PI/w_f)
 		{
-			cout << "trajectory finished with coeffs a: \n" << a.transpose() << "\n and coeffs b: \n" << b.transpose() << endl;
+
+			cout << "trajectory finished with coeffs a: \n" << endl;
+			for (int i=0; i<axis*N; i++)
+			{
+				cout << a(i)<< ", \t";
+			}
+			
+			cout << "\n and coeffs b: \n" << endl;
+
+			for (int i=0; i<axis*N; i++)
+			{
+				cout << b(i)<< ", \t";
+			}
 			Corr_mat = least_square->getCorrelationMatrixConditioning(); 
 			double cond = Corr_mat.completeOrthogonalDecomposition().pseudoInverse().norm() * Corr_mat.norm();
 			cout << "the corresponding condition number is: " << cond << endl;
+
+
 			trajectory_file << "a: \n" << a.transpose() << "\n"; 
 			trajectory_file << "b: \n" << b.transpose() << "\n";
 			trajectory_file << "kappa: \n" << cond << "\n";

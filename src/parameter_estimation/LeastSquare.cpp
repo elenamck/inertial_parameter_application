@@ -64,17 +64,28 @@ void LeastSquare::updateData()
 		}
 		else
 		{
+			// Eigen::MatrixXd A_temp = _A;
+			// Eigen::VectorXd FT_temp = _FT;
+
+			// _A.resize(_n_measurements*6, 10);
+			// _FT.resize(_n_measurements*6);
+
+			// _A.topRows((_n_measurements-1)*6) = A_temp;
+			// _FT.topRows((_n_measurements-1)*6) = FT_temp;
+
+			// _A.bottomRows(6) = _A_curr;
+			// _FT.bottomRows(6) = _ft;
 			Eigen::MatrixXd A_temp = _A;
 			Eigen::VectorXd FT_temp = _FT;
 
 			_A.resize(_n_measurements*6, 10);
 			_FT.resize(_n_measurements*6);
 
-			_A.topRows((_n_measurements-1)*6) = A_temp;
-			_FT.topRows((_n_measurements-1)*6) = FT_temp;
+			_A.bottomRows((_n_measurements-1)*6) = A_temp;
+			_FT.bottomRows((_n_measurements-1)*6) = FT_temp;
 
-			_A.bottomRows(6) = _A_curr;
-			_FT.bottomRows(6) = _ft;
+			_A.topRows(6) = _A_curr;
+			_FT.topRows(6) = _ft;
 		}
 	}
 	else
@@ -271,6 +282,16 @@ Eigen::MatrixXd LeastSquare::getDataMatrixConditioning()
 Eigen::MatrixXd LeastSquare::getCorrelationMatrixConditioning()
 {
 	return _A_conditioning.transpose() * _A_conditioning;
+}
+
+Eigen::MatrixXd LeastSquare::getCurrentDataMatrixStacked()
+{
+	return _A;
+}
+
+Eigen::VectorXd LeastSquare::getCurrentInputVectorStacked()
+{
+	return _FT;
 }
 
 } /* namespace ParameterEstimation */

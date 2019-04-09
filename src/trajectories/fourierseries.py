@@ -20,7 +20,7 @@ grey = (0.6118, 0.6157, 0.6235)
 yellow = (0.9765, 0.7294, 0)
 color_list = [blue, red, green, orange, grey, purple, yellow]
 
-def fourier_series(a, b, axis, N, w_f, q0, time):
+def fourier_series_q(a, b, axis, N, w_f, q0, time):
     M_a = np.zeros(shape=(N, axis))
     M_b = np.zeros(shape=(N, axis))
     for i in np.arange(axis):
@@ -44,11 +44,50 @@ def fourier_series(a, b, axis, N, w_f, q0, time):
             
     return q
 
+def fourier_series_dq(a, b, axis, N, w_f, q0, time):
+    M_a = np.zeros(shape=(N, axis))
+    M_b = np.zeros(shape=(N, axis))
+    for i in np.arange(axis):
+        for j in np.arange(N):
+            M_a[j, i] = a[j+(i*2)]
+            M_b[j, i] = b[j+(i*2)]
+            
+    arg = w_f * time
+    arg_diff = w_f
+    arg_diff_diff = w_f*w_f
 
+    q = np.zeros(shape=(axis))
+    dq = np.zeros(shape=(axis))
+    ddq = np.zeros(shape=(axis))
+    for i in np.arange(axis):
+        q[i] = q0[i]
+        for j in np.arange(N):
+            q[i] += M_a[j,i] * np.sin(arg*(j+1)) + M_b[j,i] * np.cos(arg*(j+1))
+            dq[i] += M_a[j,i] * arg_diff * (j+1) * np.cos(arg*(j+1)) - M_b[j,i] * arg_diff * (j+1) * np.sin(arg*(j+1))
+            ddq[i] += - M_a[j,i] * arg_diff_diff * (j+1)*(j+1) * np.sin(arg*(j+1)) - M_b[j,i] * arg_diff_diff * (j+1)*(j+1) * np.cos(arg*(j+1))
+            
+    return dq
 
-problem = Problem()
-problem.addVariable('a', range(5))
-problem.addVariable('b', range(5))
-problem.addConstraint(lambda a, b: a + b == 5)
-problem.addConstraint(lambda a, b: a * b == 6)
-problem.getSolutions()
+def fourier_series_ddq(a, b, axis, N, w_f, q0, time):
+    M_a = np.zeros(shape=(N, axis))
+    M_b = np.zeros(shape=(N, axis))
+    for i in np.arange(axis):
+        for j in np.arange(N):
+            M_a[j, i] = a[j+(i*2)]
+            M_b[j, i] = b[j+(i*2)]
+            
+    arg = w_f * time
+    arg_diff = w_f
+    arg_diff_diff = w_f*w_f
+
+    q = np.zeros(shape=(axis))
+    dq = np.zeros(shape=(axis))
+    ddq = np.zeros(shape=(axis))
+    for i in np.arange(axis):
+        q[i] = q0[i]
+        for j in np.arange(N):
+            q[i] += M_a[j,i] * np.sin(arg*(j+1)) + M_b[j,i] * np.cos(arg*(j+1))
+            dq[i] += M_a[j,i] * arg_diff * (j+1) * np.cos(arg*(j+1)) - M_b[j,i] * arg_diff * (j+1) * np.sin(arg*(j+1))
+            ddq[i] += - M_a[j,i] * arg_diff_diff * (j+1)*(j+1) * np.sin(arg*(j+1)) - M_b[j,i] * arg_diff_diff * (j+1)*(j+1) * np.cos(arg*(j+1))
+            
+    return ddq

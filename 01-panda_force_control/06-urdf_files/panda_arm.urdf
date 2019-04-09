@@ -144,10 +144,24 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
         </geometry>
       </visual>
     </link>
+<!-- THIS IS THE LINK WITH PURE OBJECT -->
+<!--     <link name="link7">
+      <inertial>
+        <origin xyz="0.0 0.0 0.09" rpy="0 -0 0" />
+        <mass value="1.3" />
+        <inertia ixx="0.004212" iyy="0.004212" izz="0.004212" ixy="0" ixz="0" iyz="0" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
+        </geometry>
+      </visual>
+    </link> -->
 
 <!--      <link name="link8">
        <inertial>       

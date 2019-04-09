@@ -7,6 +7,7 @@
 #include "filters/KalmanFilter.h"
 #include "filters/QuaternionBasedEKF.h"
 #include "trajectories/JointSpaceSinusodial.h"
+#include "filters/MeanFilter.h"
 
 
 
@@ -88,6 +89,8 @@ string FORCE_VIRTUAL_DES_KEY;
 string JOINT_ANGLE_INPUTS_KEY;
 string JOINT_VELOCITIES_INPUTS_KEY;
 
+string POS_EE_KEY;
+
 
 #define  GOTO_INITIAL_CONFIG 	 0
 #define  SINUSODIAL				 1
@@ -103,6 +106,9 @@ int main() {
 		JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
 		EE_FORCE_SENSOR_FORCE_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force_des";
+
+		POS_EE_KEY = "sai2::DemoApplication::Panda::kinematics::pos::sensor";
+
 
 
 		// "sai2::DemoApplication::Panda::simulation::virtual_force";
@@ -207,39 +213,14 @@ int main() {
 	Vector3d vel_sat = Vector3d(0.2,0.2,0.2);
 	// pos ori controller
 	const string link_name = "link7";
-	const Vector3d pos_in_link = Vector3d(0,0,0.15);
-	auto pos_task = new Sai2Primitives::PositionTask(robot, link_name, pos_in_link);
-	pos_task->_max_velocity = 0.11;
+	const Vector3d pos_in_link = Vector3d(0,0,0.106);
 
-	pos_task->_kp = 67.0;
-	pos_task->_kv = 2.2*sqrt(pos_task->_kp);
-
-	pos_task->_velocity_saturation = true;
-	pos_task->_saturation_velocity = vel_sat;
-	VectorXd pos_task_torques = VectorXd::Zero(dof);
-
-	Vector3d pos_des_1 = Vector3d(.5,0.4,0.15);
-	Vector3d pos_des_2 = Vector3d(.5,-0.4,0.6);
-	Vector3d pos_des_3 = Vector3d(.5,-0.4,0.15);
-	Vector3d pos_des_4 = Vector3d(.5,0.4,0.6);
-
-	double delta_x = 0.1;
-	double delta_y = 0.1;
-	double delta_z = 0.1;
-
-	double x_des = 0.5;
-	double y_des = 0.5;
-	double z_des = 0.5;
-
-	double x_des_back =  0.1;
-	double y_des_back = -0.5;
-	double z_des_back =  0.3;
 
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = M_PI/7;
-	joint_task->_kp = 57.0;
-	joint_task->_kv = 2.2 * sqrt(joint_task->_kp);
+	joint_task->_kp = 987;
+	joint_task->_kv = 63.76;
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
@@ -264,7 +245,7 @@ int main() {
 	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
 
 	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,7,Lambda);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,5,Lambda);
 	auto LS = new ParameterEstimation::LeastSquare(false);
 
 
@@ -362,6 +343,20 @@ int main() {
   	VectorXd y_ekf = VectorXd::Zero(m_ekf);
 
 	auto extended_kalman_filter = new KalmanFilters::QuaternionBasedEKF( dt, C_ekf, Q_ekf, R_ekf, P_ekf);
+	const int window_size = 2;
+	auto mean_accel = new Filters::MeanFilter(window_size,3);
+	auto mean_avel = new Filters::MeanFilter(window_size,3);
+	auto mean_aaccel = new Filters::MeanFilter(window_size,3);
+	auto mean_g_local = new Filters::MeanFilter(window_size,3);
+	auto mean_force_moment = new Filters::MeanFilter(window_size,6);
+
+	VectorXd accel_local_mean = VectorXd::Zero(3);
+	VectorXd avel_local_mean = VectorXd::Zero(3);
+	VectorXd aaccel_local_mean = VectorXd::Zero(3);
+	VectorXd g_local_mean = VectorXd::Zero(3);
+	VectorXd force_moment_mean = VectorXd::Zero(6);
+
+
 
   	
 
@@ -408,10 +403,10 @@ int main() {
 	//for sinusodial trajectories
 
 
-	int axis = 5; 
+	int axis = 4; 
 	int N = 3; 
 	double w_s = 1000;
-	double w_f = 0.628; 
+	double w_f = 0.4; 
 	// double w_f = 0.8; 
 	VectorXd q_des = VectorXd::Zero(axis);
 	VectorXd dq_des = VectorXd::Zero(axis);
@@ -425,9 +420,17 @@ int main() {
 // b <<-0.0587619 , -0.637884  , 0.447126 ,  0.343481 , -0.814954  , 0.554182  , 0.574948  , 0.315083 , 0.0014389,  -0.165644 ,-0.0166339  ,-0.758012  , 0.942208 ,  -0.90314 , -0.374112;
 
 
+// a << -0.934053, 	0.554726, 	0.147692;	
+// b << 0.157019, 	0.822921, 	-0.102832;
+// a << -0.307137, 	0.699636, 	-0.0966319, 	-0.0140335, 	-0.637647, 	0.435327, 	-0.221199, 	-0.42967, 	0.254573, 	-0.404099, 	-0.665026, 	-0.379811, 	0.435619, 	-0.391179, 	-0.11536;
+// b << -0.238391, 	0.418179, 	0.248428, 	0.322399, 	0.2656, 	-0.229715, 	-0.216378, 	0.338296, 	-0.588994, 	0.66866, 	0.690936, 	0.642729, 	-0.272505, 	-0.518133, 	-0.100065;
+	
+	a <<  -0.0685063, 	-0.266057, 	0.363782, 	0.49263, 	-0.229633, 	0.581041, 	0.243644, 	0.158148, 	-0.289556, 	-0.0398136, 	-0.622877, 	-0.327384;	
 
-a << 0.0531349 ,  0.64613, -0.521805, -0.197109 ,0.0110764 ,-0.473099 , 0.308901 , 0.264062, -0.695749 ,-0.409325,  0.491164 ,-0.240792, -0.181961  ,0.626443 , 0.386011;
-b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.213347 , -0.223942 ,  0.194998 ,-0.0610527 ,  0.246667 , -0.355373  , 0.331152  ,-0.599954 , 0.0126356;
+
+
+// b <<0.164893, 	0.286424, 	-0.270565, 	0.686873, 	-0.102795, 	0.343893, 	0.0232298, 	-0.136117, 	-0.589154, 	0.182915, 	0.389056, 	0.473262;
+
 	auto joint_trajectory = new Trajectories::JointSpaceSinusodial(axis, N, w_s, w_f, a,b);
 	VectorXd desired_initial_configuration_trunc = VectorXd::Zero(axis);
 	desired_initial_configuration_trunc = desired_initial_configuration.tail(axis);
@@ -445,8 +448,8 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 	// create timer
 	chrono::high_resolution_clock::time_point t_start;
 	chrono::duration<double> t_elapsed;
-
-
+	Vector3d pos_in_ee = Vector3d::Zero();
+	Affine3d T_link;
 
 	// while window is open:
 	while (runloop) {
@@ -468,19 +471,20 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 		robot->rotation(R_link,link_name);
 		robot->angularVelocity(avel_kin,link_name);
 		robot->angularAcceleration(aaccel_kin,link_name);	
+		robot->transform(T_link, link_name);
+		g_local = T_link.inverse()*robot->_world_gravity;
+		// g_local = T_link.inverse()*robot->_world_gravity;
 
-		g_local = R_link.transpose()*robot->_world_gravity;
-
-		pos_kin = R_link.transpose()*pos_kin;	
-		vel_kin = R_link.transpose()*vel_kin;
-		accel_kin = R_link.transpose()*accel_kin;
+		// pos_in_ee = T_link.inverse()*pos_kin;	
+		vel_kin = T_link.inverse()*vel_kin;
+		accel_kin = T_link.inverse()*accel_kin;
 		accel_kin += g_local;
 
-		ori_quat_kin_aux = R_link.transpose();
+		ori_quat_kin_aux = R_link;
 		ori_quat_kin_aux.normalize();
 		ori_quat_kin << ori_quat_kin_aux.w(), ori_quat_kin_aux.vec();
-		avel_kin = R_link.transpose()*avel_kin;
-		aaccel_kin = R_link.transpose()*aaccel_kin;
+		avel_kin = T_link.inverse()*avel_kin;
+		aaccel_kin = T_link.inverse()*aaccel_kin;
 		
 		// update robot model
 		if(flag_simulation)
@@ -541,8 +545,14 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 
 		}
 
+		mean_accel->process(accel_local_mean, accel_local);
+		mean_avel->process(avel_local_mean, avel_local);
+		mean_aaccel->process(aaccel_local_mean, aaccel_local);
+		mean_g_local->process(g_local_mean, g_local);
+		mean_force_moment->process(force_moment_mean, force_moment);
 
-			RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+
+			RLS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
 			phi_RLS = RLS->getInertialParameterVector();
 			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
@@ -551,13 +561,7 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 
 
 		
-		if(controller_counter%1000==0)
-		{
-			cout << "estimated mass: \n" << phi_RLS(0) << "\n";
-		    cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
-		    cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
 
-		}
 
 
 
@@ -572,11 +576,13 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 			joint_task->computeTorques(joint_task_torques);
 
 			command_torques = joint_task_torques + coriolis;
+			cout << "desired velocity" << joint_task->_desired_velocity.transpose() << endl;
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-			if(config_error.norm() < 0.2)
+			if(config_error.norm() < 0.05)
 			{
-				joint_task->reInitializeTask();			    
+				joint_task->reInitializeTask();		
+				joint_task->_desired_velocity.tail(axis) = VectorXd::Zero(axis);
 			    // joint_task->_goal_position(6) = 0.8*M_PI;
 
 			    state = SINUSODIAL;
@@ -594,9 +600,20 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 			q_des = joint_trajectory->getJointAngles();
 			dq_des = joint_trajectory->getJointVelocities();
 			joint_task->_goal_position.tail(axis) = q_des;
-			joint_task->_desired_velocity.tail(axis)= dq_des;
+			// joint_task->_desired_velocity.tail(axis)= dq_des;
 
-			LS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+			if (controller_counter%2 == 0)
+			{
+				LS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
+			}
+
+			if(controller_counter%1000==0)
+		{
+			cout << "estimated mass: \n" << phi_RLS(0) << "\n";
+		    cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
+		    cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
+
+		}
 
 			// compute task torques
 			joint_task->computeTorques(joint_task_torques);
@@ -608,12 +625,19 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 
 			if ((trajectory_counter/w_s) >= 2*M_PI/w_f)
 			{
+				
 				phi_LS = LS->getInertialParameterVector();
 				center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0); 
 				inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
 				cout << "estimated mass LS: \n" << phi_LS(0) << "\n";
 		   		cout << "estimated center of mass LS: \n" << 	center_of_mass_LS.transpose() << "\n";
 		    	cout << "estimated Inertia LS: \n" << inertia_tensor_LS << "\n";
+
+		    	// cout << "datamatrix: \n" << LS->getCurrentDataMatrixStacked() << endl;
+		    	// cout << "FT Vector: \n" << LS->getCurrentInputVectorStacked() << endl;
+		    	
+
+
 
 		    	state = REST;
 		    	// joint_task->_goal_position = desired_initial_configuration;
@@ -629,12 +653,24 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
-
+			LS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
 			// compute torques
 			joint_task->computeTorques(joint_task_torques);
 
 			command_torques = joint_task_torques   + coriolis;
-		}
+
+			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
+			// if(config_error.norm() < 0.1)
+			// {		
+			// 	phi_LS = LS->getInertialParameterVector();
+			// 	center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0); 
+			// 	inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+			// 	cout << "estimated mass LS: \n" << phi_LS(0) << "\n";
+		 //   		cout << "estimated center of mass LS: \n" << 	center_of_mass_LS.transpose() << "\n";
+		 //    	cout << "estimated Inertia LS: \n" << inertia_tensor_LS << "\n";
+		 //    	break;
+			// }
+	}
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
@@ -663,6 +699,8 @@ b << 0.126082 ,  0.372304 ,-0.0880562,  -0.221572 ,  0.454981,   0.535143,  -0.2
 		redis_client.setEigenMatrixDerived(JOINT_ANGLE_INPUTS_KEY, q_des);
 
 		redis_client.setEigenMatrixDerived(JOINT_VELOCITIES_INPUTS_KEY, dq_des);
+		redis_client.setEigenMatrixDerived(POS_EE_KEY, pos_in_ee);
+
 		controller_counter++;
 
 	}
