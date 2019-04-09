@@ -108,7 +108,7 @@ int main() {
 	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, false);
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
-	graphics->_world->setShowFrame(true, true);
+	// graphics->_world->setShowFrame(true, true);
 
 	// load simulation world
 	auto sim = new Simulation::Sai2Simulation(world_file, false);
