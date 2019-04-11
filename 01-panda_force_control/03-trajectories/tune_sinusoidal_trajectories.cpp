@@ -214,13 +214,13 @@ int main() {
 				cout << b(i)<< ", \t";
 			}
 			Corr_mat = least_square->getCorrelationMatrixConditioning(); 
-			double cond = Corr_mat.completeOrthogonalDecomposition().pseudoInverse().norm() * Corr_mat.norm();
-			cout << "the corresponding condition number is: " << cond << endl;
+			// double cond = Corr_mat.completeOrthogonalDecomposition().pseudoInverse().norm() * Corr_mat.norm();
+			// cout << "the corresponding condition number is: " << cond << endl;
 
 
 			trajectory_file << "a: \n" << a.transpose() << "\n"; 
 			trajectory_file << "b: \n" << b.transpose() << "\n";
-			trajectory_file << "kappa: \n" << cond << "\n";
+			// trajectory_file << "kappa: \n" << cond << "\n";
 
 
 			a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});

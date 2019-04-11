@@ -237,10 +237,16 @@ int main() {
 
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
+<<<<<<< HEAD
 	joint_task->_max_velocity = M_PI/2;
 	joint_task->_kp = 70.0;
 	joint_task->_kv = 2.0 * sqrt(joint_task->_kp);
 
+=======
+	joint_task->_max_velocity = M_PI/4;
+	joint_task->_kp = 50;
+	joint_task->_kv = 11;
+>>>>>>> 5837509c75085d2375732288a7e734668e4396dd
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
