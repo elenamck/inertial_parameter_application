@@ -82,15 +82,15 @@ int main() {
 	// static std::normal_distribution<double> dis(0.0,1.0);
 	static std::uniform_real_distribution<double> dis(-0.8, 0.8);
 
-	int axis = 4; 
+	int axis = 2; 
 	int N = 3; 
-	double w_s = 500;
+	double w_s = 1000;
 	double w_f = 0.8; 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
 
 	a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
-	b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
+	// b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
 
 	VectorXd q_lim_max_all = VectorXd::Zero(7);
 	VectorXd q_lim_min_all = VectorXd::Zero(7);
@@ -114,6 +114,8 @@ int main() {
 	q_lim_min = q_lim_min_all.tail(axis);
 	dq_lim_max = dq_lim_max_all.tail(axis);
 	ddq_lim_max  = ddq_lim_max_all.tail(axis);
+
+
 
 	VectorXd desired_initial_configuration_all = VectorXd::Zero(7);
 	desired_initial_configuration_all << 0,  -45, 0, -115, 0, 60, 60;
@@ -140,7 +142,7 @@ int main() {
 	MatrixXd A_data = MatrixXd::Zero(6,10); //Data matrix
 	Matrix3d R_link = Matrix3d::Zero();
 	// create a loop timer
-	double control_freq = 500;
+	double control_freq = 1000;
 	LoopTimer timer;
 	timer.setLoopFrequency(control_freq);   // 1 KHz
 	// timer.setThreadHighPriority();  // make timing more accurate. requires running executable as sudo.
@@ -176,7 +178,7 @@ int main() {
 			cout << "the limits are reached!" << endl;	
 			
 			a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
-			b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
+			// b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
 			trajectory_counter = 0;
 			joint_trajectory->init(desired_initial_configuration,a,b);
 			least_square->initConditioning();
@@ -222,7 +224,7 @@ int main() {
 
 
 			a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
-			b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
+			// b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
 			trajectory_counter = 0;
 			joint_trajectory->init(desired_initial_configuration,a,b);
 			least_square->initConditioning();
