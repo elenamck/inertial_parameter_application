@@ -4,8 +4,6 @@
 #include "Sai2Primitives.h"
 #include "parameter_estimation/RecursiveLeastSquare.h"
 #include "parameter_estimation/LeastSquare.h"
-#include "filters/KalmanFilter.h"
-#include "filters/QuaternionBasedEKF.h"
 #include "trajectories/JointSpaceSinusodial.h"
 #include "filters/MeanFilter.h"
 
@@ -237,16 +235,12 @@ int main() {
 
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
-<<<<<<< HEAD
-	joint_task->_max_velocity = M_PI/2;
-	joint_task->_kp = 70.0;
-	joint_task->_kv = 2.0 * sqrt(joint_task->_kp);
 
-=======
 	joint_task->_max_velocity = M_PI/4;
-	joint_task->_kp = 50;
-	joint_task->_kv = 11;
->>>>>>> 5837509c75085d2375732288a7e734668e4396dd
+	joint_task->_kp = 100.0;
+	joint_task->_kv = 1.6 * sqrt(joint_task->_kp);
+
+
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
@@ -279,7 +273,7 @@ int main() {
 	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
 
 	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,5,Lambda);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,2,Lambda);
 	auto LS = new ParameterEstimation::LeastSquare(false);
 
 
@@ -346,7 +340,7 @@ int main() {
 	VectorXd force_moment = VectorXd::Zero(6);
 	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
 	ifstream bias;
-	bias.open("../02-utilities/FT_data1.txt");
+	bias.open("../../02-utilities/FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
         cout << "Can't open Data!" << endl;
@@ -373,8 +367,8 @@ int main() {
 	// int N = 3; 
 	int axis = 4;
 	int N = 3;
-	double w_s = 800;
-	double w_f = 0.3; 
+	double w_s = 1000;
+	double w_f = 0.4; 
 	// double w_f = 0.8; 
 	VectorXd q_des = VectorXd::Zero(axis);
 	VectorXd dq_des = VectorXd::Zero(axis);
@@ -395,7 +389,7 @@ int main() {
 // a << -0.307137, 	0.699636, 	-0.0966319, 	-0.0140335, 	-0.637647, 	0.435327, 	-0.221199, 	-0.42967, 	0.254573, 	-0.404099, 	-0.665026, 	-0.379811, 	0.435619, 	-0.391179, 	-0.11536;
 // b << -0.238391, 	0.418179, 	0.248428, 	0.322399, 	0.2656, 	-0.229715, 	-0.216378, 	0.338296, 	-0.588994, 	0.66866, 	0.690936, 	0.642729, 	-0.272505, 	-0.518133, 	-0.100065;
 	
-a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156986, 	-0.696319, 	0.251489, 	-0.418301, 	-0.121738, 	0.964821;	
+a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907198, 	-0.234161, 	-0.374772, 	0.0721155, 	0.191923, 	-0.00187571;	
 // a << 	-0.418301, 	-0.121738, 	0.964821;	
 
 
@@ -415,7 +409,7 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 
 
 	// create a loop timer
-	double control_freq = 800;
+	double control_freq = 1000;
 	LoopTimer timer;
 	timer.setLoopFrequency(control_freq);   // 1 KHz
 	// timer.setThreadHighPriority();  // make timing more accurate. requires running executable as sudo.
@@ -433,12 +427,15 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 		// wait for next scheduled loop
 		timer.waitForNextLoop();
 
+		
 
+		
 		// read from Redis
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 		robot->_ddq = redis_client.getEigenMatrixJSON(JOINT_ACCELERATIONS_KEY);
 		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
+
 
 		//Kinematics 
 
@@ -453,50 +450,7 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 			robot->updateModel();
 			robot->coriolisForce(coriolis);
 
-			robot->position(pos_kin, link_name, Vector3d::Zero());
-			robot->linearVelocity(vel_kin, link_name);
-			robot->linearAcceleration(accel_kin,link_name, Vector3d::Zero());
 
-			robot->rotation(R_link,link_name);
-			robot->angularVelocity(avel_kin,link_name);
-			robot->angularAcceleration(aaccel_kin,link_name);	
-
-			Eigen::Vector3d wd_global = aaccel_kin;
-			Eigen::Vector3d wd_local  = R_link.transpose()*aaccel_kin;
-
-			// std::cout << "wd_global = " << wd_global.transpose() << std::endl;
-
-
-
-			g_local = R_link.transpose()*robot->_world_gravity;
-			// g_local = T_link.inverse()*robot->_world_gravity;
-
-			// pos_in_ee = T_link.inverse()*pos_kin;	
-			vel_kin = R_link.transpose()*vel_kin;
-			accel_kin = R_link.transpose()*accel_kin;
-			accel_kin += g_local;
-
-			ori_quat_kin_aux = R_link;
-			ori_quat_kin_aux.normalize();
-			ori_quat_kin << ori_quat_kin_aux.w(), ori_quat_kin_aux.vec();
-			avel_kin = R_link.transpose()*avel_kin;
-			aaccel_kin = R_link.transpose()*aaccel_kin;
-
-			accel_local = accel_kin;
-			avel_local = avel_kin;
-			aaccel_local = aaccel_kin;
-
-			avel_test = avel_kin;
-			aaccel_test = aaccel_kin;
-			avel_test(0) = 0;
-			avel_test(1) = 0;
-			aaccel_test(0) = 0;
-			aaccel_test(1) = 0; 
-
-			if(angular_case)
-			{
-				aaccel_test(2) = robot->_ddq(6);
-			}
 			accel_from_sim = redis_client.getEigenMatrixJSON(LINEAR_ACC_KEY);
 			avel_from_sim = redis_client.getEigenMatrixJSON(ANGULAR_VEL_KEY);
 			aaccel_from_sim = redis_client.getEigenMatrixJSON(ANGULAR_ACC_KEY);
@@ -548,7 +502,7 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 			command_torques = joint_task_torques + coriolis;
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-			if(config_error.norm() < 0.005)
+			if(config_error.norm() < 0.01)
 			{
 
 				joint_trajectory->init(desired_initial_configuration_trunc);
@@ -570,6 +524,7 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 			// update tasks models
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
+
 			joint_trajectory->update(trajectory_counter);
 			q_des = joint_trajectory->getJointAngles();
 			// cout << "q_des: " << q_des << " q_robot: " <<  robot->_q(6) << endl;
@@ -580,19 +535,25 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 			ddq_des = joint_trajectory->getJointAccelerations();
 						// cout << "ddq_des: " << ddq_des << " ddq_robot: " <<  robot->_ddq(6) << endl;
 
+
 			joint_task->_goal_position.tail(axis) = q_des;
 			joint_task->_desired_velocity.tail(axis)= dq_des;
+
+			
 
 
 
 			// LS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
 			// LS->addData(force_moment, accel_test, avel_test, aaccel_test, g_local);
 // RLS->addData(force_moment, accel_kin, avel_kin, aaccel_kin, g_local);
+			// t_start = std::chrono::high_resolution_clock::now();
+
 			RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
 			phi_RLS = RLS->getInertialParameterVector();
 			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-			
+			// t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
+			// cout << "Elapsed time trajectory update: " << t_elapsed.count() << endl;
 
 			if(controller_counter%1000==0)
 			{
@@ -609,7 +570,7 @@ a <<-0.565504, 	0.238097, 	0.220872, 	-0.841108, 	-0.303804, 	-0.232204, 	-0.156
 			
 			trajectory_counter++;
 
-			if ((trajectory_counter/w_s) >= trajectory_counter_multiple *(2*M_PI/w_f) )
+			if ((trajectory_counter/w_s) >= trajectory_counter_multiple *(2*M_PI/w_f)/2 )
 			{
 				cout << "excictation period finished" << endl;
 				trajectory_counter_multiple ++; 

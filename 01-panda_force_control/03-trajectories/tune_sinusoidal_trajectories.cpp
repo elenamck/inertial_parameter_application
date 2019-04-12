@@ -82,10 +82,10 @@ int main() {
 	// static std::normal_distribution<double> dis(0.0,1.0);
 	static std::uniform_real_distribution<double> dis(-0.8, 0.8);
 
-	int axis = 2; 
+	int axis = 4; 
 	int N = 3; 
 	double w_s = 1000;
-	double w_f = 0.8; 
+	double w_f = 0.6; 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
 
@@ -150,7 +150,7 @@ int main() {
 	timer.initializeTimer(1000000); // 1 ms pause before starting loop
 
 	ofstream trajectory_file;
-  	trajectory_file.open ("../../../01-panda_force_control/03-trajectories/sinusoidal_trajectories_03.txt");
+  	trajectory_file.open ("../../../01-panda_force_control/03-trajectories/sinusoidal_trajectories_04.txt");
 
 	// while window is open:
 	while (runloop) {
@@ -214,13 +214,13 @@ int main() {
 				cout << b(i)<< ", \t";
 			}
 			Corr_mat = least_square->getCorrelationMatrixConditioning(); 
-			// double cond = Corr_mat.completeOrthogonalDecomposition().pseudoInverse().norm() * Corr_mat.norm();
-			// cout << "the corresponding condition number is: " << cond << endl;
+			double cond = Corr_mat.completeOrthogonalDecomposition().pseudoInverse().norm() * Corr_mat.norm();
+			cout << "the corresponding condition number is: " << cond << endl;
 
 
 			trajectory_file << "a: \n" << a.transpose() << "\n"; 
 			trajectory_file << "b: \n" << b.transpose() << "\n";
-			// trajectory_file << "kappa: \n" << cond << "\n";
+			trajectory_file << "kappa: \n" << cond << "\n";
 
 
 			a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
