@@ -9,12 +9,14 @@ ADD_EXECUTABLE (estimation_controller_debugging estimation_controller_debugging.
 ADD_EXECUTABLE (estimation_controller estimation_controller.cpp)
 ADD_EXECUTABLE (estimation_test estimation_test.cpp)
 ADD_EXECUTABLE (inertia_estimation inertia_estimation.cpp)
+ADD_EXECUTABLE (sinusoidal_estimation sinusoidal_estimation.cpp)
 
 
 
 # and link the library against the executable
 
 TARGET_LINK_LIBRARIES (estimation_test ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
+TARGET_LINK_LIBRARIES (sinusoidal_estimation ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 
 TARGET_LINK_LIBRARIES (estimation_controller_debugging ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 
