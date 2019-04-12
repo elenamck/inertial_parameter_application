@@ -71,17 +71,7 @@ std::string POSITION_KEY;
 #define	 MOVE_BACK					8
 #define  GO_BACK_TO_INITIAL_CONFIG 	9
 
-/* Data Matrix Force/Torque virtual A_t based on 
- *"Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
- */
-Eigen::MatrixXd GetDataMatrixFT(Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local);
-/* Data Matrix Force/Torque virtual A_t based on 
- * "Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
-*/
-Eigen::MatrixXd computeSigma(Eigen::MatrixXd K, Eigen::MatrixXd Sigma, Eigen::MatrixXd A);
-Eigen::MatrixXd computeK(Eigen::MatrixXd Sigma, Eigen::MatrixXd A, Eigen::MatrixXd Lambda);
 
-void computeInertial(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd A, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma); 
 
 
 
@@ -205,7 +195,8 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = M_PI/7.5;
 	// joint_task->_max_velocity = 0;
-	joint_task->_kp = 41.0;
+
+	joint_task->_kp = 80.0;
 	joint_task->_kv = 2.1 * sqrt(joint_task->_kp);
 
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
@@ -362,9 +353,10 @@ int main() {
 	hand_let_go_2 << thumb_flex_home, thumb_oppo_home, index_dist_home, index_prox_home, middle_dist_home, middle_prox_home, ring_home, pinky_home, finger_spread_home;
 	//cout << "hand_pre_grasp" << hand_pre_grasp.transpose() << endl;
 	int n_counter;
-	int wait_time = 1000;
-	Vector3d desired_position_above_hand = Vector3d(0.64, -0.23,  0.4);
-	Vector3d desired_position_letgo_hand = Vector3d(0.64, -0.23, 0.38);
+
+	int wait_time = 800;
+	Vector3d desired_position_above_hand = Vector3d(0.655, -0.2,  0.4);
+	Vector3d desired_position_letgo_hand = Vector3d(0.67, -0.22, 0.29);
 	Matrix3d desired_orientation_above_hand = Matrix3d::Zero();
 	desired_orientation_above_hand << -0.8  , 0.2  , -0.6,
    										 0.57  ,  -0.14,   -0.8,
@@ -531,7 +523,9 @@ int main() {
 					joint_task->reInitializeTask();
 					posori_task->reInitializeTask();
 					//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-					posori_task->_goal_position(2) -= 0.13;
+
+					posori_task->_goal_position(2) -= 0.06;
+					
 					state = MOVE_DOWN_TO_OBJECT;				
 			}
 
@@ -557,6 +551,8 @@ int main() {
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
+
+				posori_task->_goal_position(1) -= 0.03;
 				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				state = GRASP;
 				
@@ -586,31 +582,26 @@ int main() {
 			}
 			if(n_counter==wait_time*2)
 			{
-				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_2);
+
+				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_3);
 			}
 			if(n_counter==wait_time*3)
 			{
-				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_3);
+				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_4);
 			}
 			if(n_counter==wait_time*4)
 			{
-				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_4);
-			}
-			if(n_counter==wait_time*5)
-			{
-				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_5);
-			}
-			if(n_counter==wait_time*6)
-			{
 				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_grasp_6);
 			}
+
 
 			redis_client.getEigenMatrixDerived(SVH_HAND_POSITIONS_KEY, current_position_hand);
 
 			//VectorXd config_error_hand = current_position_hand - hand_grasp_6;
 			//cout << config_error_hand.norm() << endl;
 
-			if(n_counter == wait_time*7)
+
+			if(n_counter == wait_time*5)
 			{
 
 				joint_task->reInitializeTask();
@@ -676,6 +667,8 @@ int main() {
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
+
+				joint_task->_goal_position(6) += M_PI/6;
 				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				state == LET_GO_OF_OBJECT;
 				
@@ -781,15 +774,6 @@ int main() {
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
 		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
 
-		//offline processing
-		if(state !=GOTO_INITIAL_CONFIG)
-		{
-			redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
-			redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
-			redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
-			redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
-			redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
-		}
 
 
 
@@ -816,108 +800,3 @@ int main() {
 
 }
 
-// - Data Matrix A_t Full based on "Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008
-// - accel_local: object linear acceleration in sensor frame
-// - aaccel_local: object angular acceleration in sensor frame
-// - avel_local: object angular velocity in sensor frame
-// - g_local: gravity vector in sensor frame
-Eigen::MatrixXd GetDataMatrixFT(Eigen::Vector3d accel_local, Eigen::Vector3d avel_local, Eigen::Vector3d aaccel_local, Eigen::Vector3d g_local)
-
-{
-		Eigen::MatrixXd A_t = Eigen::MatrixXd::Zero(6,10);
-		for (int i=0; i<3; i++)    
-			{
-				for (int j=4; j<10; j++)
-				{
-					A_t(i,j)= 0.0;
-				}	
-			}
-		for (int i=3; i<6; i++)
-			{
-				A_t(i,0)=0.0;
-			} 	  
-		A_t(3,1) = 0.0;
-		A_t(4,2) = 0.0;
-		A_t(5,3) = 0.0;	
-
-		for (int i=0; i<3; i++)
-			{
-				A_t(i,0) = accel_local(i)-g_local(i);
-			}
-
-		A_t(0,1) = - avel_local(1)*avel_local(1) - avel_local(2)*avel_local(2);
-		A_t(0,2) = avel_local(0)*avel_local(1) - aaccel_local(2);
-		A_t(0,3) = avel_local(0)*avel_local(2) + aaccel_local(1);
-
-		A_t(1,1) = avel_local(0)*avel_local(1) + aaccel_local(2);
-		A_t(1,2) = - avel_local(0)*avel_local(0) - avel_local(2)*avel_local(2);  
-		A_t(1,3) = avel_local(1)*avel_local(2) - aaccel_local(0);
-
-		A_t(2,1) = avel_local(0)*avel_local(2) - aaccel_local(1);
-		A_t(2,2) = avel_local(1)*avel_local(2) + aaccel_local(0);
-		A_t(2,3) = - avel_local(1)*avel_local(1)-avel_local(0)*avel_local(0);
-
-		A_t(3,2) = accel_local(2) - g_local(2);  
-		A_t(3,3) = g_local(1) - accel_local(1);
-		A_t(3,4) = aaccel_local(0);
-		A_t(3,5) = aaccel_local(1) - avel_local(0)*avel_local(2);
-		A_t(3,6) = aaccel_local(2) + avel_local(0)*avel_local(1);
-		A_t(3,7) = - avel_local(1)*avel_local(2);
-		A_t(3,8) = avel_local(1)*avel_local(1) - avel_local(2)*avel_local(2);
-		A_t(3,9) = avel_local(1)*avel_local(2);
-
-		A_t(4,1) = g_local(2) - accel_local(2);
-		A_t(4,3) = accel_local(0) - g_local(0);
-		A_t(4,4) = avel_local(0)*avel_local(2);
-		A_t(4,5) = aaccel_local(0) + avel_local(1)*avel_local(2);
-		A_t(4,6) = avel_local(2)*avel_local(2) - avel_local(0)*avel_local(0);
-		A_t(4,7) = aaccel_local(1);
-		A_t(4,8) = aaccel_local(2) - avel_local(0)*avel_local(1);
-		A_t(4,9) = - avel_local(0)*avel_local(2);
-
-		A_t(5,1) = accel_local(1) - g_local(1);
-		A_t(5,2) = g_local(0) - accel_local(0);
-		A_t(5,4) = - avel_local(0)*avel_local(1);
-		A_t(5,5) = avel_local(0)*avel_local(0) - avel_local(1)*avel_local(1);
-		A_t(5,6) = aaccel_local(0) - avel_local(1)*avel_local(2);
-		A_t(5,7) = avel_local(0)*avel_local(1);
-		A_t(5,8) = aaccel_local(1) + avel_local(0)*avel_local(2);	
-		A_t(5,9) = aaccel_local(2);	
-
-		return A_t;
-
-}
-
-
-
-
-Eigen::MatrixXd computeK(Eigen::MatrixXd Sigma, Eigen::MatrixXd A, Eigen::MatrixXd Lambda)
-{
-
-	Eigen::MatrixXd K = Sigma*A.transpose()*(A*Sigma*A.transpose()+ Lambda).inverse();
-
-	return K;
-}
-
-Eigen::MatrixXd computeSigma(Eigen::MatrixXd K, Eigen::MatrixXd Sigma, Eigen::MatrixXd A)
-{
-
-	Sigma = (Eigen::MatrixXd::Identity(10,10) - K*A)*Sigma;
-	return Sigma;
-}
-
-
-void computeInertial(int n_measurements, Eigen::VectorXd force_virtual, Eigen::MatrixXd A, Eigen::VectorXd& phi, Eigen::MatrixXd& Sigma)
-{
-	if (n_measurements == 0)
-	{
-		Sigma = Eigen::MatrixXd::Identity(10,10);
-	}
-	else
-	{
-		Eigen::MatrixXd Lambda = Eigen::MatrixXd::Identity(6, 6);
-		Eigen::MatrixXd K = computeK(Sigma, A, Lambda);
-		Sigma = computeSigma(K, Sigma, A);
-		phi = phi + K*(force_virtual - A*phi);
-	}
-}
