@@ -85,7 +85,7 @@ int main() {
 	int axis = 4; 
 	int N = 3; 
 	double w_s = 1000;
-	double w_f = 0.6; 
+	double w_f = 0.8; 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
 
