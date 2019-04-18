@@ -350,8 +350,7 @@ int main() {
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 
-		force_moment =
-		redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
+		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
 		force_sensed << force_moment(0), force_moment(1), force_moment(2);
 		// robot->rotation(R_link,link_name);  // g_local =
 		R_link.transpose()*robot->_world_gravity; // update robot model
@@ -414,8 +413,9 @@ int main() {
 				phi_RLS = RLS_2->getInertialParameterVector();
 
 
+			cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
 
-			cout << "current inertial parameters for filter size  " <<  filter_size << " and lambda_factor: " << lambda_factor << " is: "<<  phi_RLS.transpose() << endl; 
+			// cout << "current inertial parameters for filter size  " <<  filter_size << " and lambda_factor: " << lambda_factor << " is: "<<  phi_RLS.transpose() << endl; 
 
 			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
