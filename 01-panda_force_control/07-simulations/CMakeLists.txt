@@ -7,7 +7,6 @@ INCLUDE_DIRECTORIES (
 
 #simulation file
 ADD_EXECUTABLE(simviz01 simviz.cpp)
-ADD_EXECUTABLE(simtest test_sim.cpp)
 #simulation file
 # ADD_EXECUTABLE (simviz_orig simviz_orig.cpp)
 # ADD_EXECUTABLE (simviz_modeled_sensor simviz_modeled_sensor.cpp)
@@ -15,7 +14,6 @@ ADD_EXECUTABLE(simtest test_sim.cpp)
 
 
 # and link the library against the executable
-TARGET_LINK_LIBRARIES(simtest ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 
 TARGET_LINK_LIBRARIES(simviz01 ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
 # TARGET_LINK_LIBRARIES (simviz_modeled_sensor ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
