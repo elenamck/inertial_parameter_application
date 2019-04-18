@@ -38,6 +38,34 @@ RecursiveLeastSquare::RecursiveLeastSquare(bool lin, int filter_size, const Eige
 
 }
 
+void RecursiveLeastSquare::init()
+{
+	_accel_local.setZero();
+	_aaccel_local.setZero();
+	_avel_local.setZero();
+	_g_local.setZero();
+	_A_curr.setZero(6,10);
+	_A.setZero(6,10); 
+	_A_lin_curr.setZero(3,4);
+	_A_lin.setZero(3,4);
+	_phi.setZero(10);
+	_phi_lin.setZero(4); 
+	_ft.setZero(6); 
+	_FT.setZero(6); 
+	_f.setZero();
+	_F.setZero(3); 
+	_ft_contact.setZero(6); 
+	_f_contact.setZero(); 
+	_n_measurements = 0;
+	_Sigma.setZero(10,10);
+	_Sigma_lin.setZero(4,4);
+	_K.setZero(10,6*_filter_size);
+	_K_lin.setZero(4,3*_filter_size);
+	_Lambda_filt.setZero(6,6);
+	_Lambda_filt_lin.setZero(3,3);
+}
+
+
 void RecursiveLeastSquare::addData(const Eigen::VectorXd& force_measurment, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local)
 {
 	_accel_local  = accel_local;
@@ -169,11 +197,19 @@ void RecursiveLeastSquare::updateParameters()
 
 		}
 		else if (_n_measurements >=_filter_size)
-		{
+		{	
+
+			// std::cout << "Data Matrix: " << _A << std::endl;
+			// std::cout << "FT: " << _FT.transpose() << std::endl;
+			// std::cout << "Sigma: " << _Sigma << std::endl;
+			// std::cout << "Lambda: " << _Lambda << std::endl;
 			_K = _Sigma*_A.transpose()*(_A*_Sigma*_A.transpose()+ _Lambda_filt).inverse();
+
+			// std::cout << "Gain: " << _K << std::endl;
 			_Sigma = (Eigen::MatrixXd::Identity(10,10) - _K*_A)*_Sigma;
+			// std::cout << "Sigma: " << _Sigma << std::endl;
 			_phi = _phi + _K*(_FT - _A*_phi);
-			
+			// std::cout << "phi: " << _phi.transpose() << std::endl;
 		}
 	}
 	else
@@ -395,6 +431,41 @@ Eigen::VectorXd RecursiveLeastSquare::getCurrentInputVector()
 	{
 		return _f;
 	}
+}
+
+
+Eigen::MatrixXd RecursiveLeastSquare::getCurrentGainMatrix()
+{
+	if(_linear_case==false)
+	{
+		return _K;
+	}
+	else
+	{
+		return _K_lin;
+	}
+}
+
+
+Eigen::MatrixXd RecursiveLeastSquare::getCurrentParameterCovarianceMatrix()
+{
+	if(_linear_case==false)
+	{
+		return _Sigma;
+	}
+	else
+	{
+		return _Sigma_lin;
+	}
+}
+
+Eigen::MatrixXd RecursiveLeastSquare::getCurrentNoiseCovarianceMatrix()
+{
+	if(_linear_case==false)
+	{
+		return _Lambda;
+	}
+
 }
 
 }/* namespace ParameterEstimation */
