@@ -4,7 +4,7 @@
 -> 0.0333 kg for mass values additional links 
 -more realitic values for inertial params, source https://github.com/mkrizmancic/franka_gazebo/blob/master/robots/panda_arm.xacro
  -->
-<robot name="panda">
+<robot name="panda_sensor_mass">
 
     <link name="link0">
       <inertial>

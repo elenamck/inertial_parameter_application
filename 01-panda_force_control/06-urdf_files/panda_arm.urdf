@@ -10,7 +10,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link0.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link0.obj"/>
         </geometry>
       </visual>
 <!--       <collision>
@@ -27,7 +27,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link1.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link1.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -44,7 +44,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link2.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link2.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -61,7 +61,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link3.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link3.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -78,7 +78,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link4.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link4.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -95,7 +95,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link5.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link5.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -112,7 +112,7 @@
       </inertial>
       <visual>
         <geometry>
-          <!-- <mesh filename="../../../robot_models/Panda/meshes/link6.obj"/> -->
+          <mesh filename="../../../robot_models/Panda/meshes/link6.obj"/>
         </geometry>
       </visual>
       <!-- <collision>
@@ -122,10 +122,10 @@
       </collision> -->
     </link>
 <!-- THIS IS THE LINK FROM THE ROBOT MODEL -->
-<!--         <link name="link7">
+        <link name="link7">
       <inertial>
-        <origin xyz="0 0 0.08" rpy="0 -0 0" />
-        <mass value="0.5" />
+        <origin xyz="0 0 0.2" rpy="0 -0 0" />
+        <mass value="1.8" />
         <inertia ixx="0.05" iyy="0.05" izz="0.05" ixy="0" ixz="0" iyz="0" />
       </inertial>
       <visual>
@@ -133,9 +133,9 @@
           <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
         </geometry>
       </visual>
-    </link> -->
+    </link>
 <!-- THIS IS THE LINK WITH ADDITIVE INERTIA -->
-    <link name="link7">
+<!--     <link name="link7">
       <inertial>
         <origin xyz="0 0 0.203" rpy="0 -0 0" />
         <mass value="1.8" />
@@ -147,7 +147,7 @@
           <mesh filename="../../../robot_models/Panda/meshes/link7.obj"/>
         </geometry>
       </visual>
-    </link>
+    </link> -->
 <!-- THIS IS THE LINK WITH PURE OBJECT -->
 <!--     <link name="link7">
       <inertial>

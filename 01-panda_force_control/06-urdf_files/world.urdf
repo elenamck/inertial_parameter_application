@@ -11,7 +11,7 @@
 	</robot>
 
 	<static_object name="Floor">
-		<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+		<origin xyz="0.0 0.0 -0.05" rpy="0 0 0" />
 		<collision>
 	        <origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
 	        <geometry>
@@ -23,11 +23,76 @@
 	        <geometry>
 	            <box size="3.0 3.0 0.1" />
 	        </geometry>
-	        <material name="material_red">
-		        <color rgba="0.1 0.1 0.1 1.0" />
+	        <material name="material_grey">
+		        <color rgba="0.6 0.6 0.6 1.0" />
 	        </material>
 	    </visual>
 	</static_object>
+
+<!-- 
+    <material name="material_red">
+            <color rgba="1 0 0 1" />
+    </material>
+
+    <material name="material_white">
+            <color rgba="0.0 0.0 0.0 1.0" />
+    </material>
+
+        <material name="material_green">
+            <color rgba="0 1 0 1" />
+    </material> -->
+
+<static_object name="box1">
+ -->
+     <origin xyz="0.65 -0.3375 0.11" rpy="0 0 0" />
+    <visual>
+<!--     	<origin xyz="0.15 0.0625 0.11" rpy="0 0 0" />
+ -->    	<!-- <origin xyz="0.15 -0.0625 0.0" rpy="0 0 0" /> -->
+	<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+        <geometry>
+            <box size="0.3 0.125 0.22" />
+        </geometry>
+    <material name="material_red">
+            <color rgba="1 0 0 1" />
+    </material>
+        </visual>
+</static_object>
+<!-- 
+<static_object name="box3">
+     <origin xyz="0.5 -0.4 0.1" rpy="0 0 0" />
+    <visual>
+    	<origin xyz="0.15 0.0625 0.11" rpy="0 0 0" /> -->
+    	<!-- <origin xyz="0.15 -0.0625 0.0" rpy="0 0 0" /> -->
+<!--         <geometry>
+            <box size="0.3 0.125 0.22" />
+        </geometry>
+    <material name="material_blue">
+            <color rgba="0 0 1 1" />
+    </material>
+        </visual>
+</static_object> -->
+
+
+
+<dynamic_object name="obj1">
+<origin xyz="0.73 -0.35 0.22" rpy="0 0 0" />
+         <inertial>
+        <origin xyz="0 0 0.0605" rpy="0 0 0" />
+        <mass value="0.676" />
+        <inertia ixx="0.0010688" iyy="0.0010688" izz="0.0004881" ixy="0" ixz="0" iyz="0" />
+      </inertial>
+    <visual>
+    	<origin xyz="0.0 0.0 0.0" rpy="0 0 0" />
+    	    	<!-- <origin xyz="0.019 0.019 -0.0605" rpy="0 0 0" /> -->
+         <geometry>
+            <cylinder length="0.121" radius="0.038" />
+        </geometry>
+        <material name="material_white">
+                <color rgba="1.0 1.0 1.0 1.0" />
+        </material>
+    </visual>
+</dynamic_object>
+
 
 
 	<light name="light1" type="directional">

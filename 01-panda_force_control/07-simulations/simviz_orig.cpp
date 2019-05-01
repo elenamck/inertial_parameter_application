@@ -18,7 +18,7 @@
 
 using namespace std;
 
-const string world_file = "../../resources/01-panda_force_control/world_without_gravity.urdf";
+const string world_file = "../../resources/01-panda_force_control/world_panda_arm.urdf";
 const string robot_file = "../../resources/01-panda_force_control/panda_arm.urdf";
 const string robot_name = "FRANKA-PANDA";
 const string camera_name = "camera_fixed";
@@ -29,8 +29,10 @@ const string JOINT_TORQUES_COMMANDED_KEY = "sai2::DemoApplication::Panda::actuat
 // - write:
 const string JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 const string JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
+const string JOINT_ACCELERATIONS_KEY = "sai2::DemoApplication::Panda::sensors::ddq";
+
 const string SIM_TIMESTAMP_KEY = "sai2::DemoApplication::Panda::simulation::timestamp";
-const string EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::force_sesnor::force_moment";
+// const string EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::force_sesnor::force_moment";
 
 bool runloop = false;
 void sighandler(int){runloop = false;}
@@ -76,15 +78,15 @@ int main() {
 	signal(SIGINT, &sighandler);
 
 	// load graphics scene
-	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, true);
+	auto graphics = new Sai2Graphics::Sai2Graphics(world_file, false);
 	Eigen::Vector3d camera_pos, camera_lookat, camera_vertical;
 	graphics->getCameraPose(camera_name, camera_pos, camera_vertical, camera_lookat);
 
 	// load simulation world
-	auto sim = new Simulation::Sai2Simulation(world_file, true);
+	auto sim = new Simulation::Sai2Simulation(world_file, false);
 
 	// load robots
-	auto robot = new Sai2Model::Sai2Model(robot_file, true);
+	auto robot = new Sai2Model::Sai2Model(robot_file, false);
 
 	sim->setCollisionRestitution(0);
 	sim->setCoeffFrictionStatic(0.5);
@@ -110,7 +112,7 @@ int main() {
 
     // create window and make it current
     glfwWindowHint(GLFW_VISIBLE, 0);
-    GLFWwindow* window = glfwCreateWindow(windowW, windowH, "SAI2.0 - FRANKA-PANDA-ORIG", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(windowW, windowH, "SAI2.0 - IIWA-Passivity", NULL, NULL);
 	glfwSetWindowPos(window, windowPosX, windowPosY);
 	glfwShowWindow(window);
     glfwMakeContextCurrent(window);
@@ -206,8 +208,6 @@ int main() {
 	    }
 	    graphics->setCameraPose(camera_name, camera_pos, cam_up_axis, camera_lookat);
 	    glfwGetCursorPos(window, &last_cursorx, &last_cursory);
-	    	graphics->_world->setShowFrame(true, true);
-
 	}
 
 	// stop simulation
@@ -230,14 +230,15 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 	Eigen::VectorXd robot_torques = Eigen::VectorXd::Zero(dof);
 	Eigen::VectorXd gravity_torques = Eigen::VectorXd::Zero(dof);
 	redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, robot_torques);
+	Eigen::MatrixXd Jacobian_obj_com = Eigen::MatrixXd::Zero(3, dof);
 
 	// create force sensor
-	ForceSensorSim* force_sensor = new ForceSensorSim(robot_name, "link7", Eigen::Affine3d::Identity(), robot);
-	Eigen::Vector3d force, moment;
-	Eigen::VectorXd force_moment = Eigen::VectorXd::Zero(6);
+	// ForceSensorSim* force_sensor = new ForceSensorSim(robot_name, "link7", Eigen::Affine3d::Identity(), robot);
+	// Eigen::Vector3d force, moment;
+	// Eigen::VectorXd force_moment = Eigen::VectorXd::Zero(6);
 
 	// create a loop timer 
-	double sim_freq = 2000;  // set the simulation frequency. Ideally 10kHz
+	double sim_freq = 10000;  // set the simulation frequency. Ideally 10kHz
 	LoopTimer timer;
 	timer.setLoopFrequency(sim_freq);   // 10 KHz
 	// timer.setThreadHighPriority();  // make timing more accurate. requires running executable as sudo.
@@ -247,30 +248,41 @@ void simulation(Sai2Model::Sai2Model* robot, Simulation::Sai2Simulation* sim)
 	while (runloop) {
 		// wait for next scheduled loop
 		timer.waitForNextLoop();
+
 		// read torques from Redis
 		redis_client.getEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, robot_torques);
-
-		force_sensor->update(sim);
-		force_sensor->getForceLocalFrame(force);
-		force_sensor->getMomentLocalFrame(moment);
-		force_moment << force, moment;
-
-		// update kinematic models
-		sim->getJointPositions(robot_name, robot->_q);
-		sim->getJointVelocities(robot_name, robot->_dq);
-		robot->updateModel();
-
 		robot->gravityVector(gravity_torques);
-		sim->setJointTorques(robot_name, robot_torques );
+		double object_mass = 1.3;
+		Eigen::Vector3d object_com = Eigen::Vector3d(0.0, 0.0, 0.09);
+		robot->Jv(Jacobian_obj_com, "link7", object_com);
+		// gravity_torques += Jacobian_obj_com * (- object_mass * Eigen::Vector3d(0.0,0.0, -9.81));
+		sim->setJointTorques(robot_name, robot_torques + gravity_torques);
 
 		// update simulation by 1ms
 		sim->integrate(1/sim_freq);
 
+		// force_sensor->update(sim);
+		// force_sensor->getForceLocalFrame(force);
+		// force_sensor->getMomentLocalFrame(moment);
+		// force_moment << force, moment;
+
+
+
+		// // CalcPointJacobian(*_rbdl_model, _q, body_id, it_body->mCenterOfMass, Jv, false);
+
+		// // g += Jv.transpose() * (-mass * gravity);
+		// // update kinematic models
+		sim->getJointPositions(robot_name, robot->_q);
+		sim->getJointVelocities(robot_name, robot->_dq);
+		sim->getJointVelocities(robot_name, robot->_ddq);
+		robot->updateModel();
 
 		// write joint kinematics to redis
 		redis_client.setEigenMatrixDerived(JOINT_ANGLES_KEY, robot->_q);
 		redis_client.setEigenMatrixDerived(JOINT_VELOCITIES_KEY, robot->_dq);
-		redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, -force_moment);
+		redis_client.setEigenMatrixDerived(JOINT_ACCELERATIONS_KEY, robot->_ddq);
+
+		// redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, -force_moment);
 		redis_client.setCommandIs(SIM_TIMESTAMP_KEY,std::to_string(timer.elapsedTime()));
 
 		sim_counter++;
@@ -356,3 +368,4 @@ void mouseClick(GLFWwindow* window, int button, int action, int mods) {
 			break;
 	}
 }
+

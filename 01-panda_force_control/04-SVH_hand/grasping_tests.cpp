@@ -6,6 +6,9 @@
 #include "filters/QuaternionBasedEKF.h"
 #include "parameter_estimation/RecursiveLeastSquare.h"
 #include "parameter_estimation/LeastSquare.h"
+#include "filters/SecOrderLowPass.hpp"
+#include "filters/ButterworthFilter.h"
+
 
 
 
@@ -65,6 +68,9 @@ std::string EE_FORCE_SENSOR_KEY;
 std::string QUATERNION_KEY;
 std::string POSITION_KEY;
 
+string INERTIAL_PARAMS_LP_KEY ;
+string INERTIAL_PARAMS_BUTTER_KEY;
+
 #define  GOTO_INITIAL_CONFIG 	 	0
 #define  MOVE_TO_OBJECT          	1
 #define  MOVE_ABOVE_OBJECT 		 	2
@@ -75,6 +81,9 @@ std::string POSITION_KEY;
 #define  LET_GO_OF_OBJECT 		 	7
 #define	 MOVE_BACK					8
 #define  GO_BACK_TO_INITIAL_CONFIG 	9
+#define  REST 						11
+
+#define  MOVE_AWAY_WITH_OBJECT		10
 
 
 
@@ -111,11 +120,13 @@ int main() {
 		GYROSCOPE_DATA_KEY ="sai2::3spaceSensor::data::gyroscope";    
 
 		//corrected sensor data(accelerometer: gravity removed, right frame, Gyroscope: right frame)
-		LINEAR_ACCELERATION_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel";
-		ANGULAR_VELOCITY_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel";
+		// LINEAR_ACCELERATION_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel";
+		// ANGULAR_VELOCITY_LOCAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel";
 		EE_FORCE_SENSOR_KEY ="sai2::DemoApplication::FrankaPanda::controller::force_moment";
-		QUATERNION_KEY = "sai2::DemoApplication::Panda::controller::quaternion";
-		POSITION_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos";
+		INERTIAL_PARAMS_LP_KEY = "sai2::DemoApplication::FrankaPanda::estimation::inertial_parameter::lowpass";
+		INERTIAL_PARAMS_BUTTER_KEY = "sai2::DemoApplication::FrankaPanda::estimation::inertial_parameter::butter";
+		// QUATERNION_KEY = "sai2::DemoApplication::Panda::controller::quaternion";
+		// POSITION_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos";
 
 		SVH_HAND_POSITION_COMMAND_KEY ="sai2::SVHHand_Left::position_command";
 		SVH_HAND_GRASP_FLAG_KEY ="sai2::SVHHand_Left::grasp_type_flag";
@@ -126,28 +137,6 @@ int main() {
 
 
 
-	//Read Bias file and write force torque bias in "force_torque_bias" vector
-	VectorXd force_moment = VectorXd::Zero(6);
-	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
-	ifstream bias;
-	bias.open("../../02-utilities/FT_data1.txt");
-	if (!bias)  
-	{                     // if it does not work
-        cout << "Can't open Data!" << endl;
-    }
-    else
-    {
-    	
-    	for (int row ; row<6; row++)
-    	{
-    		double value = 0.0;
-    		bias >> value;
-    		force_torque_bias(row) = value;
-    	}
-    cout << "bias read" << force_torque_bias << endl;
-    bias.close();
-	}
-    cout << "test" << endl;			
     // start redis client
 	auto redis_client = RedisClient();
 	redis_client.connect();
@@ -179,20 +168,20 @@ int main() {
 
 	//Controllers
 	Vector3d vel_sat = Vector3d(0.2,0.2,0.2);
-	Vector3d avel_sat = Vector3d(M_PI/7.5, M_PI/7.5, M_PI/7.5);
+	Vector3d avel_sat = Vector3d(M_PI/5.5, M_PI/5.5, M_PI/5.5);
 	// pos ori controller
 	const string link_name = "link7";
 	const Eigen::Vector3d pos_in_link = Vector3d(0,0,0);
 	auto posori_task = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
 	posori_task->_max_velocity = 0.1;
 
-	posori_task->_kp_pos = 67.0;
-	posori_task->_kv_pos = 2.2*sqrt(posori_task->_kp_pos);
+	posori_task->_kp_pos = 75.0;
+	posori_task->_kv_pos = 2.3*sqrt(posori_task->_kp_pos);
 	posori_task->_kp_ori = 52.0;
-	posori_task->_kv_pos = 2.1*sqrt(posori_task->_kp_ori);
-	// posori_task->_velocity_saturation = true;
-	// posori_task->_linear_saturation_velocity = vel_sat;
-	// posori_task->_angular_saturation_velocity = avel_sat;
+	posori_task->_kv_ori = 2.1*sqrt(posori_task->_kp_ori);
+	posori_task->_velocity_saturation = true;
+	posori_task->_linear_saturation_velocity = vel_sat;
+	posori_task->_angular_saturation_velocity = avel_sat;
 	VectorXd posori_task_torques = VectorXd::Zero(dof);
 
 	// position controller for angular motion
@@ -200,15 +189,19 @@ int main() {
 
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
-	joint_task->_max_velocity = M_PI/6.5;
+	joint_task->_max_velocity = M_PI/8.5;
 	// joint_task->_max_velocity = 0;
-	joint_task->_kp = 80.0;
-	joint_task->_kv = 2.1 * sqrt(joint_task->_kp);
+	joint_task->_kp = 70.0;
+	joint_task->_kv = 2 * sqrt(joint_task->_kp);
+	joint_task->_ki = 2;
 
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
+	VectorXd desired_final_configuration = VectorXd::Zero(dof);
 	VectorXd desired_grasping_configuration = VectorXd::Zero(dof);
 	VectorXd desired_letgo_configuration = VectorXd::Zero(dof);
+
+
 	
 	
 	
@@ -217,6 +210,9 @@ int main() {
 	desired_initial_configuration << 0.0614699,-0.275042,-0.376448,-1.74132,-0.0623806,1.51744,-2.02767;
 	desired_grasping_configuration << 0.333325,0.484366,-0.310534,-1.62655,-1.3009,1.24677,-1.80465;
 	desired_letgo_configuration << 0.303131,0.863745,-0.910716,-1.63203,-1.04949,2.0947,-1.64691;
+
+	desired_final_configuration << 0.0,-0.2,-0.3,-1.7,-0.06,1.5,-2.0;
+	// desired_initial_configuration << 0.0,0.0,-0.3,-1.7,0.0,1.5,-2.0;
 	joint_task->_goal_position = desired_initial_configuration;
 
 	int state = GOTO_INITIAL_CONFIG;
@@ -360,22 +356,81 @@ int main() {
 	//cout << "hand_pre_grasp" << hand_pre_grasp.transpose() << endl;
 	int n_counter;
 	int wait_time = 800;
-	Vector3d desired_position_above_hand = Vector3d(0.655, -0.2,  0.4);
-	Vector3d desired_position_letgo_hand = Vector3d(0.67, -0.22, 0.29);
+	Vector3d desired_position_above_hand = Vector3d(0.652, -0.2,  0.4);
+	Vector3d desired_position_letgo_hand = Vector3d(0.67, -0.22, 0.3);
+	Vector3d desired_position_away_ob = Vector3d(0.6,0.2,0.65);
 	Matrix3d desired_orientation_above_hand = Matrix3d::Zero();
+
+
+	//cutoff frequeny, try frequency of trajectory
+	double fc = 20;
+	//normalized cutoff frequeency, for butterworth
+	double fc_n = fc / (control_freq);
+
+	//time constant, for lowpassfilter
+	double tau = 1/(2*M_PI*fc);
+	//damping lowpass filer
+	double d = 0.7;
+
+	auto butter_filter_ft = new ButterworthFilter(6);
+	butter_filter_ft->setCutoffFrequency(fc_n);
+	VectorXd force_moment_butter_filtered = VectorXd::Zero(6);
+
+	auto butter_filter_kin = new ButterworthFilter(6);
+	butter_filter_kin->setCutoffFrequency(fc_n);
+	VectorXd kin_butter_aux = VectorXd::Zero(6);
+	VectorXd kin_butter_filtered = VectorXd::Zero(6);
+
+
+	//////////////////////////LP///////////////////////////
+	VectorXd force_moment_lp_filtered = VectorXd::Zero(6);
+	auto low_pass_filter_ft = new am2b::SecOrderLowPass<VectorXd>(VectorXd::Zero(6));
+	low_pass_filter_ft->init(1/control_freq, tau,d);
+
+	auto low_pass_filter_accel = new am2b::SecOrderLowPass<Vector3d>(Vector3d::Zero());
+	low_pass_filter_accel->init(1/control_freq, tau,d);
+	Vector3d accel_lp_filtered = Vector3d::Zero();
+
+	auto low_pass_filter_avel = new am2b::SecOrderLowPass<Vector3d>(Vector3d::Zero());
+	low_pass_filter_avel->init(1/control_freq, tau,d);
+
+	Vector3d avel_lp_filtered = Vector3d::Zero();
+	Vector3d aaccel_lp_filtered = Vector3d::Zero();
+	Vector3d avel_butter_filtered = Vector3d::Zero();
+	Vector3d accel_butter_filtered = Vector3d::Zero();
+
 
 
 		//For Inertial Parameter Estimation
 
 
-	double lambda_factor = 0.03;
 
-	Matrix3d Lambda = lambda_factor*Matrix3d::Identity(6,6);
+	double lambda_factor = 0.005;
+	double lambda_factor_2 = 0.001;
 
-	int filter_size = 4;
 
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(false,filter_size,Lambda);
-	auto LS = new ParameterEstimation::LeastSquare(false);
+	MatrixXd Lambda = lambda_factor*MatrixXd::Identity(6,6);
+
+	int filter_size = 10;
+	int filter_size_2 = 8;
+
+
+	MatrixXd Lambda_2 = lambda_factor_2*MatrixXd::Identity(6,6);
+
+		Lambda_2 << 0.01,  0.0, 0.0, 0.0, 0.0, 0.0,
+			    0.0, 0.01, 0.0, 0.0, 0.0, 0.0,
+	          0.0, 0.0, 0.01, 0.0, 0.0, 0.0,
+	          0.0, 0.0, 0.0, 0.001, 0.0, 0.0,
+	          0.0, 0.0, 0.0, 0.0, 0.001, 0.0,
+	          0.0, 0.0, 0.0, 0.0, 0.0, 0.001;
+
+
+
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(false,filter_size_2,Lambda_2);
+	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(false,filter_size_2,Lambda_2);
+	// auto LS = new ParameterEstimation::LeastSquare(false);
+
+
 
 
 	VectorXd phi_RLS = VectorXd::Zero(10); //inertial parameter vector
@@ -383,10 +438,39 @@ int main() {
 	Vector3d center_of_mass_RLS = Vector3d::Zero();
 
 
+	VectorXd phi_RLS_2 = VectorXd::Zero(10); //inertial parameter vector
+	Matrix3d inertia_tensor_RLS_2 = Matrix3d::Zero();
+	Vector3d center_of_mass_RLS_2 = Vector3d::Zero();
 
-	VectorXd phi_LS = VectorXd::Zero(10); //inertial parameter vector
-	Matrix3d inertia_tensor_LS = Matrix3d::Zero();
-	Vector3d center_of_mass_LS = Vector3d::Zero();
+
+
+	// VectorXd phi_LS = VectorXd::Zero(10); //inertial parameter vector
+	// Matrix3d inertia_tensor_LS = Matrix3d::Zero();
+	// Vector3d center_of_mass_LS = Vector3d::Zero();
+
+
+
+	//Read Bias file and write force torque bias in "force_torque_bias" vector
+	VectorXd force_moment = VectorXd::Zero(6);
+	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
+	ifstream bias;
+	bias.open("../../../02-utilities/FT_data1.txt");
+	if (!bias)  
+	{                     // if it does not work
+        cout << "Can't open Data!" << endl;
+    }
+    else
+    {
+    	
+    	for (int row ; row<6; row++)
+    	{
+    		double value = 0.0;
+    		bias >> value;
+    		force_torque_bias(row) = value;
+    	}
+    cout << "bias read" << force_torque_bias << endl;
+    bias.close();
+	}
 	// create timer
 	std::chrono::high_resolution_clock::time_point t_start;
 	std::chrono::duration<double> t_elapsed;
@@ -431,60 +515,101 @@ int main() {
 
 			coriolis = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
 			force_moment -= force_torque_bias;
+			robot->rotation(R_link,link_name); 
+			g_local = R_link.transpose()*robot->_world_gravity;
+			// g_local = redis_client.getEigenMatrixJSON(ROBOT_GRAVITY_KEY);
+			// g_local = R_link.transpose
+			redis_client.getEigenMatrixDerived(ACCELEROMETER_DATA_KEY, accel_aux);
+			redis_client.getEigenMatrixDerived(GYROSCOPE_DATA_KEY, avel_aux);
 
-			robot->position(current_position_aux, link_name, Vector3d::Zero());
-			current_position_aux = R_link.transpose()*current_position_aux;
-			accel_aux = redis_client.getEigenMatrixJSON(ACCELEROMETER_DATA_KEY);
-			accel_aux = R_acc_in_ft*accel_aux;
-			accel_aux *= 9.81;
-			accel_aux += g_local;
-			y << current_position_aux, accel_aux;
-            kalman_filter->update(y);
-            kf_states = kalman_filter->state();
-            accel_local << kf_states(6), kf_states(7), kf_states(8);
+			accel_local = R_acc_in_ft*accel_aux;
+			accel_local *= 9.81;
+			accel_local += g_local;
+            avel_local = R_acc_in_ft*avel_aux;
+            kin_butter_aux << accel_local, avel_local;
 
-            avel_aux = redis_client.getEigenMatrixJSON(GYROSCOPE_DATA_KEY);
-            avel_aux = R_acc_in_ft*avel_aux;
-            avel_aux *= M_PI/180;
 
-            q_eff = R_link.transpose();
-			q_eff_aux << q_eff.w(), q_eff.vec();
+			force_moment_butter_filtered =  butter_filter_ft->update(force_moment);
+			kin_butter_filtered = butter_filter_kin->update(kin_butter_aux);
+			accel_butter_filtered << kin_butter_filtered(0), kin_butter_filtered(1) ,kin_butter_filtered(2);
+			avel_butter_filtered << kin_butter_filtered(3), kin_butter_filtered(4), kin_butter_filtered(5);
 
-			y_ekf << q_eff_aux, avel_aux;
-			extended_kalman_filter-> update(y_ekf);
-			ekf_states = extended_kalman_filter->state();
-			avel_local << ekf_states(4), ekf_states(5), ekf_states(6);
-			aaccel_local << ekf_states(7), ekf_states(8), ekf_states(9);
+
+			accel_lp_filtered = low_pass_filter_accel->process(accel_local);
+			avel_lp_filtered = low_pass_filter_avel->process(avel_local);
+            aaccel_lp_filtered = low_pass_filter_avel->getDerivative();
+            force_moment_lp_filtered = low_pass_filter_ft->process(force_moment);
+
+			// robot->position(current_position_aux, link_name, Vector3d::Zero());
+			// current_position_aux = R_link.transpose()*current_position_aux;
+			// accel_aux = redis_client.getEigenMatrixJSON(ACCELEROMETER_DATA_KEY);
+			// accel_aux = R_acc_in_ft*accel_aux;
+			// accel_aux *= 9.81;
+			// accel_aux += g_local;
+			// y << current_position_aux, accel_aux;
+   //          kalman_filter->update(y);
+   //          kf_states = kalman_filter->state();
+   //          accel_local << kf_states(6), kf_states(7), kf_states(8);
+
+   //          avel_aux = redis_client.getEigenMatrixJSON(GYROSCOPE_DATA_KEY);
+   //          avel_aux = R_acc_in_ft*avel_aux;
+   //          avel_aux *= M_PI/180;
+
+   //          q_eff = R_link.transpose();
+			// q_eff_aux << q_eff.w(), q_eff.vec();
+
+			// y_ekf << q_eff_aux, avel_aux;
+			// extended_kalman_filter-> update(y_ekf);
+			// ekf_states = extended_kalman_filter->state();
+			// avel_local << ekf_states(4), ekf_states(5), ekf_states(6);
+			// aaccel_local << ekf_states(7), ekf_states(8), ekf_states(9);
 		}
 
 		t_start = std::chrono::high_resolution_clock::now();
 
 		t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
 
-		
-
+		if(state != GOTO_INITIAL_CONFIG)
+		{
 			if(controller_counter % 2 == 0)
-			{
+			{ 
+				if(flag_simulation)
+				{
+					RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+				}
 
-			RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+				else
+				{
+					RLS->addData(force_moment_butter_filtered, accel_butter_filtered, avel_butter_filtered, Vector3d::Zero(), g_local);
+					RLS_2->addData(force_moment_lp_filtered, accel_lp_filtered, avel_lp_filtered, aaccel_lp_filtered, g_local);					
+				}
 
 			// LS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
-
 			phi_RLS = RLS->getInertialParameterVector();
 			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-			cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
+
+
+			phi_RLS_2 = RLS_2->getInertialParameterVector();
+			center_of_mass_RLS_2 << phi_RLS_2(1)/phi_RLS_2(0), phi_RLS_2(2)/phi_RLS_2(0), phi_RLS_2(3)/phi_RLS_2(0); 
+			inertia_tensor_RLS_2 << phi_RLS_2(4), phi_RLS_2(5), phi_RLS_2(6), phi_RLS_2(5), phi_RLS_2(7), phi_RLS_2(8), phi_RLS_2(6), phi_RLS_2(8), phi_RLS_2(9);
+			// cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
 
 
 			}
-		
-		
 
-			if(controller_counter%1000==0)
+			if(controller_counter%700==0)
 			{
+				cout << "1 : current inertial parameters for signals butter filtered, zero angular acceleration " << endl; 
 				cout << "estimated mass: \n" << phi_RLS(0) << endl;
 		  	  	cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << endl;
 		   		cout << "estimated Inertia: \n" << inertia_tensor_RLS << endl;
+				
+				cout << "2 : current inertial parameters for signals lowpass filtered" << endl; 
+		   		cout << "estimated mass: \n" << phi_RLS_2(0) << endl;
+		  	  	cout << "estimated center of mass: \n" << 	center_of_mass_RLS_2.transpose() << endl;
+		   		cout << "estimated Inertia: \n" << inertia_tensor_RLS_2 << endl;
+
 
 
 		 //   		phi_LS = LS->getInertialParameterVector();
@@ -495,6 +620,9 @@ int main() {
 		 //  	  	cout << "estimated center of mass: \n" << 	center_of_mass_LS.transpose() << endl;
 		 //   		cout << "estimated Inertia: \n" << inertia_tensor_LS << endl;
 			}
+		}
+		
+
 		//cout << "Elapsed time Inertial Parameter Estimation: " << t_elapsed.count() << endl;
 
 		//robot->position(current_position_aux,link_name,Vector3d::Zero());
@@ -504,6 +632,8 @@ int main() {
 			// cout << "current_orientation: " << posori_task->_current_orientation.transpose() << endl;
 			// cout << "current_state: " << state << endl;
 		}
+
+		
  	 	if(state == GOTO_INITIAL_CONFIG)
 		{	
 			// update tasks models
@@ -518,12 +648,12 @@ int main() {
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
 			// cout << config_error.norm() << endl;
-			// if(config_error.norm() < 0.3)
-			if(config_error.norm() < 0.05)
+			if(config_error.norm() < 0.3)
+			// if(config_error.norm() < 0.05)
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				joint_task->_goal_position = desired_grasping_configuration;
 				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_pre_grasp);
 				cout << "hand_pre_grasp" << hand_pre_grasp.transpose() << endl;
@@ -545,12 +675,13 @@ int main() {
 
 			command_torques = joint_task_torques + coriolis;
 			VectorXd config_error = desired_grasping_configuration - joint_task->_current_position;
-			//cout << config_error.norm() << endl;
-			if(config_error.norm() < 0.3)
+			// cout << config_error.norm() << endl;
+			if(config_error.norm() < 0.23)
 			{	
 					joint_task->reInitializeTask();
 					posori_task->reInitializeTask();
-					//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+					posori_task->disableVelocitySaturation();
+
 				
 					posori_task->_goal_position =desired_position_above_hand;
 					state = MOVE_ABOVE_OBJECT;				
@@ -576,12 +707,17 @@ int main() {
 
 			VectorXd config_error_posori = desired_position_above_hand - posori_task->_current_position;
 			//cout << config_error_posori.norm() <<endl;
-			if(config_error_posori.norm() < 0.015)
+			if(config_error_posori.norm() < 0.013)
 			{	
 					joint_task->reInitializeTask();
 					posori_task->reInitializeTask();
-					//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-					posori_task->_goal_position(2) -= 0.06;
+
+					cout << "current_position move above obj: " << posori_task->_current_position.transpose() << endl;
+					cout << "current_orientation move above obj: " << posori_task->_current_orientation.transpose() << endl;
+
+
+					// posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+					posori_task->_goal_position(2) -= 0.105;
 					
 					state = MOVE_DOWN_TO_OBJECT;				
 			}
@@ -603,15 +739,16 @@ int main() {
 
 
 			VectorXd config_error_posori = posori_task->_goal_position - posori_task->_current_position;
-			//cout << config_error_posori.norm() <<endl;
-			if(config_error_posori.norm() < 0.015)
+			// cout << config_error_posori.norm() <<endl;
+			if(config_error_posori.norm() < 0.013)
 			{
 				cout << "current_position move down to obj: " << posori_task->_current_position.transpose() << endl;
-				
+				cout << "current_orientation move down obj: " << posori_task->_current_orientation.transpose() << endl;
+
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
-				posori_task->_goal_position(1) -= 0.03;
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				posori_task->_goal_position(1) -= 0.025;
+				// posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				state = GRASP;
 				
 			}
@@ -660,15 +797,19 @@ int main() {
 
 			if(n_counter == wait_time*5)
 			{
-				cout << "current_position grasp: " << posori_task->_current_position.transpose() << endl;
+				// cout << "current_position grasp: " << posori_task->_current_position.transpose() << endl;
+				robot->rotation(desired_orientation_above_hand, link_name);
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
-				cout << "_goal_position in grasp: " << posori_task->_goal_position.transpose() << endl;
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-				posori_task->_goal_position(2) = 0.7;
-				cout << "_goal_position in grasp: " << posori_task->_goal_position.transpose() << endl;
+				// cout << "_goal_position in grasp: " << posori_task->_goal_position.transpose() << endl;
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				// posori_task->_goal_position(2) = 0.7;
+				// cout << "_goal_position in grasp: " << posori_task->_goal_position.transpose() << endl;
 				n_counter = 0;
-				state = MOVE_ABOVE_WITH_OBJECT;
+
+				cout << "estimation with object" << endl;
+				// state = MOVE_ABOVE_WITH_OBJECT;
+				state = MOVE_AWAY_WITH_OBJECT;
 				
 			}
 
@@ -690,16 +831,16 @@ int main() {
 			command_torques = posori_task_torques+ joint_task_torques + coriolis;
 
 			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
-			//cout << config_error.norm() <<endl;
+			// cout << config_error.norm() <<endl;
 			if(config_error.norm() < 0.03)
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
 				posori_task->_goal_position =  desired_position_letgo_hand;
 				 
-				cout << "_goal_position in MOVE_ABOVE_WITH_OBJECT: " << posori_task->_goal_position.transpose() << endl;
+				// cout << "_goal_position in MOVE_ABOVE_WITH_OBJECT: " << posori_task->_goal_position.transpose() << endl;
 				// joint_task->_goal_position(6) -= M_PI/5;
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				state = MOVE_DOWN_WITH_OBJECT;
 				
 			}
@@ -723,13 +864,13 @@ int main() {
 
 			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
 
-			//cout << config_error.norm() <<endl;
-			if(config_error.norm() < 0.02)
+			// cout << config_error.norm() <<endl;
+			if(config_error.norm() < 0.015)
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
 				joint_task->_goal_position(6) += M_PI/6;
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 				state = LET_GO_OF_OBJECT;
 				
 			}
@@ -753,25 +894,28 @@ int main() {
 			command_torques = posori_task_torques+ joint_task_torques + coriolis;
 
 			n_counter++;
-			if (n_counter == wait_time)
+			if (n_counter == 2*wait_time)
 			{
 				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_let_go_1);
 			}
 
-			if (n_counter == 2*wait_time)
+			if (n_counter == 3*wait_time)
 			{
 				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_let_go_2);
 			}
 			
 
-			if(n_counter== 3*wait_time)
+			if(n_counter== 4*wait_time)
 			{
 				n_counter = 0;
 
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
-				posori_task->_goal_position(1) +=0.2;
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				posori_task->_goal_position(0) -= 0.03;
+				posori_task->_goal_position(1) += 0.15;
+				joint_task->_goal_position(6) += M_PI/2;
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				cout << "estimation without object" << endl;
 				
 				state = MOVE_BACK;
 				
@@ -796,31 +940,115 @@ int main() {
 
 			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
 
-			//cout << config_error.norm() <<endl;
+			// cout << config_error.norm() <<endl;
 			if(config_error.norm() < 0.02)
 			{
 				joint_task->reInitializeTask();
 				posori_task->reInitializeTask();
-				joint_task->_goal_position = desired_initial_configuration;
+				// joint_task->_goal_position = desired_final_configuration;
 				redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_home);
-				//posori_task->enableVelocitySaturation(vel_sat, avel_sat);
-				state = GO_BACK_TO_INITIAL_CONFIG;
+				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+				joint_task->_goal_position(6) += M_PI/6;
+				// joint_task->_goal_position(5) += M_PI/2;
+				posori_task->_goal_position = desired_position_away_ob;
+				state = REST;
 				
 			}
 			
 
 		}
 
-		if(state == GO_BACK_TO_INITIAL_CONFIG)
+		// if(state == PRE)
+
+		// {
+		// 	// update tasks models
+		// 	N_prec.setIdentity();
+		// 	posori_task->updateTaskModel(N_prec);
+		// 	N_prec = posori_task->_N;
+		// 	joint_task->updateTaskModel(N_prec);
+
+		// 	posori_task->computeTorques(posori_task_torques);
+		// 	joint_task->computeTorques(joint_task_torques);
+
+
+		// 	command_torques = posori_task_torques+ joint_task_torques + coriolis;
+
+		// 	VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+
+		// 	// cout << config_error.norm() <<endl;
+		// 	if(config_error.norm() < 0.02)
+		// 	{
+		// 		joint_task->reInitializeTask();
+		// 		posori_task->reInitializeTask();
+		// 		// joint_task->_goal_position = desired_final_configuration;
+		// 		redis_client.setEigenMatrixDerived(SVH_HAND_POSITION_COMMAND_KEY, hand_home);
+		// 		posori_task->enableVelocitySaturation(vel_sat, avel_sat);
+		// 		state = GO_BACK_TO_INITIAL_CONFIG;
+				
+		// 	}
+			
+
+		// }
+
+		if(state == REST)
 		{
-			// update tasks models
 			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
 			joint_task->updateTaskModel(N_prec);
 
+			posori_task->computeTorques(posori_task_torques);
 			joint_task->computeTorques(joint_task_torques);
 
-			command_torques =  joint_task_torques + coriolis;
 
+			command_torques = posori_task_torques+ joint_task_torques + coriolis;
+
+
+		}
+
+		if(state == MOVE_AWAY_WITH_OBJECT)
+		{
+			posori_task->_goal_position = desired_position_away_ob; 
+
+			// Eigen::Matrix3d R;
+			// double gamma = M_PI/10/1000.0 * n_counter;
+			// cout << " gamma" << gamma <<endl;
+
+			// R << 1 ,0, 0,
+			// 	0  ,cos(gamma), sin(gamma), 
+			// 	0 ,- sin(gamma), cos(gamma);
+
+			// posori_task->_desired_orientation = R.transpose()*desired_orientation_above_hand;
+			// posori_task->_desired_angular_velocity = Vector3d(0.0,0.0,0.0);
+			
+
+			// update tasks models
+			N_prec.setIdentity();
+			posori_task->updateTaskModel(N_prec);
+			N_prec = posori_task->_N;
+			joint_task->updateTaskModel(N_prec);
+
+			posori_task->computeTorques(posori_task_torques);
+			joint_task->computeTorques(joint_task_torques);
+
+
+			command_torques = posori_task_torques+ joint_task_torques + coriolis;
+
+			VectorXd config_error = posori_task->_goal_position - posori_task->_current_position;
+			n_counter ++;
+			// cout << config_error.norm() <<endl;
+			if(config_error.norm() < 0.05)
+			{
+				joint_task->reInitializeTask();
+				posori_task->reInitializeTask();
+				posori_task->_goal_position = desired_position_letgo_hand + Vector3d(0.0,0.0,0.1);
+				posori_task->_desired_orientation = desired_orientation_above_hand;
+				// cout << "MBO" << endl;
+				n_counter=0;
+				posori_task->disableVelocitySaturation();
+				state = MOVE_ABOVE_WITH_OBJECT;
+				
+			}
 
 		}
 
@@ -833,16 +1061,19 @@ int main() {
 		// redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
 		// redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
 		// redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
-		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi);
+		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_LP_KEY, phi_RLS_2);
+		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_BUTTER_KEY, phi_RLS);
+
+
 
 		//offline processing
 		if(state !=GOTO_INITIAL_CONFIG)
 		{
-			redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
-			redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
-			redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
-			redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
-			redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
+			// redis_client.setEigenMatrixDerived(LINEAR_ACCELERATION_LOCAL_KEY, accel_aux);
+			// redis_client.setEigenMatrixDerived(ANGULAR_VELOCITY_LOCAL_KEY, avel_aux);
+			// redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_KEY, force_moment);
+			// redis_client.setEigenMatrixDerived(QUATERNION_KEY, q_eff_aux);
+			// redis_client.setEigenMatrixDerived(POSITION_KEY, current_position_aux);	
 		}
 
 

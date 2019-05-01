@@ -43,6 +43,7 @@ const bool inertia_regularization = true;
 std::string JOINT_TORQUES_COMMANDED_KEY;
 // - read:
 std::string JOINT_ANGLES_KEY;
+std::string JOINT_ANGLES_DES_KEY;
 std::string JOINT_VELOCITIES_KEY;
 std::string EE_FORCE_SENSOR_FORCE_KEY;
 std::string EE_FORCE_SENSOR_KEY;
@@ -60,6 +61,8 @@ int main() {
 		JOINT_TORQUES_COMMANDED_KEY = "sai2::DemoApplication::Panda::actuators::fgc";
 		JOINT_ANGLES_KEY  = "sai2::DemoApplication::Panda::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::DemoApplication::Panda::sensors::dq";
+		JOINT_ANGLES_DES_KEY  = "sai2::DemoApplication::Panda::controller::qdes";
+
 		EE_FORCE_SENSOR_KEY = "sai2::DemoApplication::Panda::simulation::virtual_force";
 
 
@@ -70,6 +73,7 @@ int main() {
 		EE_FORCE_SENSOR_FORCE_KEY = "sai2::optoforceSensor::6Dsensor::force";
 		JOINT_ANGLES_KEY  = "sai2::FrankaPanda::Clyde::sensors::q";
 		JOINT_VELOCITIES_KEY = "sai2::FrankaPanda::Clyde::sensors::dq";
+		JOINT_ANGLES_DES_KEY  = "sai2::FrankaPanda::Clyde:::controller::qdes";
 		MASSMATRIX_KEY = "sai2::FrankaPanda::Clyde::sensors::model::massmatrix";
 		CORIOLIS_KEY = "sai2::FrankaPanda::Clyde::sensors::model::coriolis";
 		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Clyde::sensors::model::robot_gravity";	
@@ -78,7 +82,9 @@ int main() {
 	//writing data file 
 
 	ofstream myfile;
-  	myfile.open ("FT_data1.txt");
+  	myfile.open ("../../02-utilities/FT_data1.txt");
+
+  	// myfile.open ("../../data_collection/FINAL_DATA/FT_Calib/hardware/bias_fixed_cables.txt");
 
   	VectorXd force_moment_sum = VectorXd::Zero(6);
   	VectorXd force_moment_average = VectorXd::Zero(6);
@@ -118,44 +124,49 @@ int main() {
 	VectorXd force_moment = VectorXd::Zero(6);
 
 	// pos ori controller
-	const string link_name = "link7";
-	const Eigen::Vector3d pos_in_link = Vector3d(0,0,0.1);
-	auto posori_task = new Sai2Primitives::PosOriTask(robot, link_name, pos_in_link);
-	posori_task->_max_velocity = 0.08;
 
-	posori_task->_kp_pos = 100.0;
-	posori_task->_kv_pos = 20.0;
-	posori_task->_kp_ori = 100.0;
-	posori_task->_kv_ori = 20.0;
-
-
-	posori_task->_velocity_saturation = true;
-	posori_task->_linear_saturation_velocity = Eigen::Vector3d(0.1,0.1,0.1);
-	posori_task->_angular_saturation_velocity = Eigen::Vector3d(M_PI/5.0, M_PI/5.0, M_PI/5.0);
-
-	VectorXd posori_task_torques = VectorXd::Zero(dof);
-	Matrix3d initial_orientation = Matrix3d::Zero();
 
 	// joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 	joint_task->_max_velocity = 0.3;
 
-	joint_task->_kp = 150.0;
-	joint_task->_kv = 20.0;
+	joint_task->_kp = 80.0;
+	joint_task->_kv = 25.0;
+	joint_task->_ki = 30.0;
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 
 	double n = 0; // variable to wait 2 sec in pose
 
-	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
+	// VectorXd desired_initial_configuration = VectorXd::Zero(dof);
 	//desired_initial_configuration << 0, 0, 0, 0, 0, 0, 0;
 	//desired_initial_configuration << -50,  15, 35, -80, -14, 90, 130; //last
 	//desired_initial_configuration << -40,  14, 25, -80, 166, 90, -138;
 	//desired_initial_configuration << -0.702242,0.245541,0.438873,-1.40453,2.88915,1.57993,-2.4062; //in rad
-	desired_initial_configuration <<-0.212803,-0.894344,-0.323602,-2.45985,-0.240155,1.59861,2.3368;
+	// desired_initial_configuration <<-0.212803,-0.894344,-0.323602,-2.45985,-0.240155,1.59861,2.3368;
 	//desired_initial_configuration <<-0.704383,0.247327,0.410896,-1.40101,-0.25589,1.58301, 2.40276;
 
 	//desired_initial_configuration *= M_PI/180.0;
-	joint_task->_goal_position = desired_initial_configuration;
+	   VectorXd q_des_degrees = VectorXd::Zero(dof);
+
+        q_des_degrees << -90, 30, 90, -90, -30, 90, 0;
+   		VectorXd q_desired_1 = M_PI/180.0 * q_des_degrees;
+
+        q_des_degrees << -90, 30, 90, -90, 60, 90, -135;
+		VectorXd q_desired_2 = M_PI/180.0 * q_des_degrees;
+
+        q_des_degrees << -90, 30, 90, -90, 60, 90, -45;
+        VectorXd q_desired_3 = M_PI/180.0 * q_des_degrees;
+
+        q_des_degrees << -90, 30, 90, -90, 60, 90, 45;
+        VectorXd q_desired_4 = M_PI/180.0 * q_des_degrees;
+
+        q_des_degrees << -90, 30, 90, -90, 60, 90, 135;
+        VectorXd q_desired_5 = M_PI/180.0 * q_des_degrees;
+
+        q_des_degrees << -90, 30, 90, -90, 150, 90, 0;
+        VectorXd q_desired_6 = M_PI/180.0 * q_des_degrees; 
+
+	joint_task->_goal_position = q_desired_1;
 
 	int state = FIRST_MEAS;
 
@@ -214,18 +225,18 @@ int main() {
 
 
 
-			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
+			VectorXd config_error = joint_task->_goal_position- joint_task->_current_position;
 
 			cout << "config error norm" << config_error.norm() << endl;
-			if(config_error.norm() <= 0.267)
+			if(config_error.norm() <= 0.02)
 			{
 				
 				n++;
-				if (n>=2000 && n<=3000)
+				if (n>=3000 && n<=4000)
 				{	
 					force_moment_sum += force_moment;
 				}
-				if(n==5000)
+				if(n==6000)
 
 				{
 					force_moment_average = force_moment_sum / 1000;
@@ -248,8 +259,8 @@ int main() {
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
 
-			joint_task->_goal_position(4) = desired_initial_configuration(4) + M_PI/2.0; 
-
+			// joint_task->_goal_position(4) = desired_initial_configuration(4) + M_PI/2.0; 
+			joint_task->_goal_position= q_desired_2;
 
 			// compute task torques
 			joint_task->computeTorques(joint_task_torques);
@@ -259,15 +270,15 @@ int main() {
 
 
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-			if(config_error.norm() <= 0.2)
+			if(config_error.norm() <= 0.02)
 			{
 				n++;
 
-				if (n>=2000 && n<=3000)
+				if (n>=3000 && n<=4000)
 				{	
 					force_moment_sum += force_moment;
 				}
-				if(n==5000)
+				if(n==6000)
 
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
@@ -286,8 +297,7 @@ int main() {
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
 
-			joint_task->_goal_position(6) = desired_initial_configuration(6) - M_PI/2.0; 
-
+			joint_task->_goal_position = q_desired_3;
 
 			// compute task torques
 			joint_task->computeTorques(joint_task_torques);
@@ -297,15 +307,15 @@ int main() {
 
 
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-			if(config_error.norm() <= 0.2)
+			if(config_error.norm() <= 0.02)
 			{
 				n++;
 
-				if (n>=2000 && n<=3000)
+				if (n>=3000 && n<=4000)
 				{	
 					force_moment_sum += force_moment;
 				}
-				if(n==5000)
+				if(n==6000)
 
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
@@ -328,7 +338,7 @@ int main() {
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
 
-			joint_task->_goal_position(6) = desired_initial_configuration(6) - M_PI; 
+			joint_task->_goal_position = q_desired_4;
 
 
 			// compute task torques
@@ -339,15 +349,15 @@ int main() {
 
 
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-			if(config_error.norm() <= 0.2)
+			if(config_error.norm() <= 0.02)
 			{
 				n++;
 
-				if (n>=2000 && n<=3000)
+				if (n>=3000 && n<=4000)
 				{	
 					force_moment_sum += force_moment;
 				}
-				if(n==5000)
+				if(n==6000)
 
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
@@ -368,7 +378,7 @@ int main() {
 			N_prec.setIdentity();
 			joint_task->updateTaskModel(N_prec);
 
-			joint_task->_goal_position(6) = desired_initial_configuration(6) - 3*M_PI/2.0; 
+			joint_task->_goal_position = q_desired_5;
 
 
 			// compute task torques
@@ -379,15 +389,15 @@ int main() {
 
 
 			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-			if(config_error.norm() <= 0.2)
+			if(config_error.norm() <= 0.02)
 			{
 				n++;
 
-				if (n>=2000 && n<=3000)
+				if (n>=3000 && n<=4000)
 				{	
 					force_moment_sum += force_moment;
 				}
-				if(n==5000)
+				if(n==6000)
 
 				{
 					force_moment_average_temp = force_moment_sum / 1000;
@@ -403,44 +413,44 @@ int main() {
 		}
 
 
-		
-		if(state == SIXTH_MEAS)
+	
+	if(state == SIXTH_MEAS)
+	{
+		// update tasks models
+		N_prec.setIdentity();
+		joint_task->updateTaskModel(N_prec);
+
+		joint_task->_goal_position = q_desired_6;
+
+		// compute task torques
+		joint_task->computeTorques(joint_task_torques);
+
+		command_torques = joint_task_torques + coriolis;
+
+
+		VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
+
+		if(config_error.norm() <= 0.02)
 		{
-			// update tasks models
-			N_prec.setIdentity();
-			joint_task->updateTaskModel(N_prec);
+			n++;
+			if (n>=3000 && n<=4000)
+			{	
+				cout<<"config error norm"<< config_error.norm()<<endl;
+				force_moment_sum += force_moment;
+			}
+			if(n==6000)
 
-			joint_task->_goal_position(4) = desired_initial_configuration(4) + M_PI; 
-
-			// compute task torques
-			joint_task->computeTorques(joint_task_torques);
-
-			command_torques = joint_task_torques + coriolis;
-
-
-			VectorXd config_error = joint_task->_goal_position - joint_task->_current_position;
-
-			if(config_error.norm() <= 0.2)
 			{
-				n++;
-				if (n>=2000 && n<=3000)
-				{	
-					cout<<"config error norm"<< config_error.norm()<<endl;
-					force_moment_sum += force_moment;
-				}
-				if(n==5000)
-
-				{
-					force_moment_average_temp = force_moment_sum / 1000;
-					std::cout << "average2" << force_moment_average_temp << "\n";
-					force_moment_average += force_moment_average_temp;
-					force_moment_sum = VectorXd::Zero(6);
-					joint_task->reInitializeTask();
-					state = DONE;
-					n=0;
-				}
+				force_moment_average_temp = force_moment_sum / 1000;
+				std::cout << "average2" << force_moment_average_temp << "\n";
+				force_moment_average += force_moment_average_temp;
+				force_moment_sum = VectorXd::Zero(6);
+				joint_task->reInitializeTask();
+				state = DONE;
+				n=0;
 			}
 		}
+	}
 		if(state == DONE)
 		{
 			force_moment_average = force_moment_average/6;
@@ -455,6 +465,9 @@ int main() {
 		//------ Final torques
 		// command_torques.setZero();
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
+		redis_client.setEigenMatrixDerived(JOINT_ANGLES_KEY, joint_task->_current_position);
+		redis_client.setEigenMatrixDerived(JOINT_VELOCITIES_KEY, joint_task->_current_velocity);
+		redis_client.setEigenMatrixDerived(JOINT_ANGLES_DES_KEY, joint_task->_goal_position);
 
 		controller_counter++;
 

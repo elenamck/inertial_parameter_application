@@ -98,6 +98,9 @@ int main() {
 	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
 
 	Vector3d position = Vector3d::Zero();
+	Matrix3d orientation = Matrix3d::Zero();
+
+	Quaterniond orientation_quat;
 	int dof = robot->dof();
 	VectorXd command_torques = VectorXd::Zero(dof);
 	VectorXd coriolis = VectorXd::Zero(dof);
@@ -146,7 +149,17 @@ int main() {
 
 			coriolis = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
 		}
+		
+		robot->position(position, "link7", Vector3d(0.0,0.0,0.15));
+		robot->rotation(orientation, "link7");
+		orientation_quat = orientation;
 
+		if(controller_counter%1000 == 0)
+		{
+			cout << "current position: " << position.transpose() << endl;
+			cout << "current orientation: \n" <<orientation<< endl;
+
+		}
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 

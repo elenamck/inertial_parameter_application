@@ -1,0 +1,23 @@
+# create an executabl
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${INERTIAL_PARAMERTER_APP_BINARY_DIR}/01-panda_force_control/08-load_estimation)
+
+# add the include directory to the include paths
+INCLUDE_DIRECTORIES (
+	${INERTIAL_PARAMETER_INCLUDE_DIRS})
+
+ADD_EXECUTABLE (simviz simviz.cpp)
+ADD_EXECUTABLE (object_estimation object_estimation.cpp)
+
+
+
+# and link the library against the executable
+
+
+
+TARGET_LINK_LIBRARIES (simviz ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
+TARGET_LINK_LIBRARIES (object_estimation ${INERTIAL_PARAMERTER_APP_COMMON_LIBRARIES} ${INERTIAL_PARAMETER_LIBRARIES})
+
+SET(RESOURCE_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources)
+FILE(MAKE_DIRECTORY ${RESOURCE_DIR})
+FILE(COPY world.urdf DESTINATION ${RESOURCE_DIR})
+FILE(COPY panda_arm.urdf DESTINATION ${RESOURCE_DIR})

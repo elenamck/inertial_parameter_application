@@ -210,7 +210,11 @@ int main() {
 	// read from Redis
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
-	robot->_ddq = redis_client.getEigenMatrixJSON(JOINT_ACCELERATIONS_KEY);
+	if(flag_simulation)
+	{
+			robot->_ddq = redis_client.getEigenMatrixJSON(JOINT_ACCELERATIONS_KEY);
+
+	}
 
 	////////////////////////////////////////////////
 	///        Prepare the controllers         /////
@@ -236,19 +240,18 @@ int main() {
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 
-	joint_task->_max_velocity = M_PI/4;
+	joint_task->_max_velocity = M_PI/8;
 	joint_task->_kp = 100.0;
-	joint_task->_kv = 1.6 * sqrt(joint_task->_kp);
+	joint_task->_kv = 20;
 
 
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
-	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
-
-	// desired_initial_configuration << 0, 10, 0, -125, 0, 135, 0;
 
 
-	desired_initial_configuration *= M_PI/180.0;
+	desired_initial_configuration << -0.108416,0.316774,-0.0464659,-1.92505,-1.63341,1.46238,1.75189;
+
+
 	joint_task->_goal_position = desired_initial_configuration;
 
 
@@ -365,10 +368,10 @@ int main() {
 
 	// int axis = 4; 
 	// int N = 3; 
-	int axis = 4;
-	int N = 3;
+	int axis = 3;
+	int N = 4;
 	double w_s = 1000;
-	double w_f = 0.8; 
+	double w_f = 0.3; 
 	// double w_f = 0.8; 
 	VectorXd q_des = VectorXd::Zero(axis);
 	VectorXd dq_des = VectorXd::Zero(axis);
@@ -382,8 +385,19 @@ int main() {
 	// b << -0.588637, 0,    0.0532357,    0,    0.953303,   -1.672674,   0, 0.490234 ;
  // a << 0.974478 , -0.769762 ,  0.370534 , -0.327473 ,  0.783655 , -0.307155 ,  0.200041,   0.891952  , 0.685765,  -0.689094   , 0.67666 ,-0.0599719,  -0.192114,   0.836484 ,-0.0368847;
 // b <<-0.0587619 , -0.637884  , 0.447126 ,  0.343481 , -0.814954  , 0.554182  , 0.574948  , 0.315083 , 0.0014389,  -0.165644 ,-0.0166339  ,-0.758012  , 0.942208 ,  -0.90314 , -0.374112;
+a<<
+-0.22371,
+0.296364, -0.014512, -0.0652478,
+0.298492, 0.149428, 0.273493,
+0.0454486, 0.0334742, 0.0689615,
+-0.0194273, 0.158536;
 
-
+b<<
+-0.117155,
+-0.0390917, 0.256354, 0.17847,
+0.0222245, -0.11618, 0.174066,
+0.149164, 0.0539742, 0.065393,
+-0.0593078, 0.0273052;
 // a << -0.934053, 	0.554726, 	0.147692;	
 // b << 0.157019, 	0.822921, 	-0.102832;
 // a << -0.307137, 	0.699636, 	-0.0966319, 	-0.0140335, 	-0.637647, 	0.435327, 	-0.221199, 	-0.42967, 	0.254573, 	-0.404099, 	-0.665026, 	-0.379811, 	0.435619, 	-0.391179, 	-0.11536;
@@ -391,7 +405,7 @@ int main() {
 	
 // a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907198, 	-0.234161, 	-0.374772, 	0.0721155, 	0.191923, 	-0.00187571;	
 // a << 	-0.418301, 	-0.121738, 	0.964821;	
-a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.194213, 	-0.327815, 	0.261298, 	-0.659976, 	0.634429, 	0.0897043;
+// a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.194213, 	-0.327815, 	0.261298, 	-0.659976, 	0.634429, 	0.0897043;
 
 
 // b <<0.164893, 	0.286424, 	-0.270565, 	0.686873, 	-0.102795, 	0.343893, 	0.0232298, 	-0.136117, 	-0.589154, 	0.182915, 	0.389056, 	0.473262;
@@ -439,7 +453,7 @@ a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.19
 		// read from Redis
 		robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 		robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
-		robot->_ddq = redis_client.getEigenMatrixJSON(JOINT_ACCELERATIONS_KEY);
+		// robot->_ddq = redis_client.getEigenMatrixJSON(JOINT_ACCELERATIONS_KEY);
 		force_moment = redis_client.getEigenMatrixJSON(EE_FORCE_SENSOR_FORCE_KEY);
 
 
@@ -512,7 +526,7 @@ a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.19
 			command_torques = joint_task_torques + coriolis;
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-			if(config_error.norm() < 0.01)
+			if(config_error.norm() < 0.2)
 			{
 
 				joint_trajectory->init(desired_initial_configuration_trunc);
@@ -553,31 +567,31 @@ a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.19
 			
 
 
-			if (controller_counter % 2 == 0 )
-			{
-						// LS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
-					RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
-					phi_RLS = RLS->getInertialParameterVector();
-								center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-			}
-			// LS->addData(force_moment, accel_test, avel_test, aaccel_test, g_local);
-// RLS->addData(force_moment, accel_kin, avel_kin, aaccel_kin, g_local);
-			// t_start = std::chrono::high_resolution_clock::now();
+// 			if (controller_counter % 2 == 0 )
+// 			{
+// 						// LS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
+// 					RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
+// 					phi_RLS = RLS->getInertialParameterVector();
+// 								center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+// 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+// 			}
+// 			// LS->addData(force_moment, accel_test, avel_test, aaccel_test, g_local);
+// // RLS->addData(force_moment, accel_kin, avel_kin, aaccel_kin, g_local);
+// 			// t_start = std::chrono::high_resolution_clock::now();
 
-			// RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
-			// phi_RLS = RLS->getInertialParameterVector();
-			// center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-			// inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-			// t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
-			// cout << "Elapsed time trajectory update: " << t_elapsed.count() << endl;
+// 			// RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
+// 			// phi_RLS = RLS->getInertialParameterVector();
+// 			// center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+// 			// inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+// 			// t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
+// 			// cout << "Elapsed time trajectory update: " << t_elapsed.count() << endl;
 
-			if(controller_counter%1000==0)
-			{
-				cout << "estimated mass: \n" << phi_RLS(0) << "\n";
-		  	  	cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
-		   		cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
-			}
+// 			if(controller_counter%1000==0)
+// 			{
+// 				cout << "estimated mass: \n" << phi_RLS(0) << "\n";
+// 		  	  	cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
+// 		   		cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
+// 			}
 
 			// compute task torques
 			joint_task->computeTorques(joint_task_torques);
@@ -697,28 +711,28 @@ a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.19
 	}
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
+		// redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
 
-		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi_LS);
+		// redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi_LS);
 
-		redis_client.setEigenMatrixDerived(POSITION_KIN_KEY, pos_kin);
-		redis_client.setEigenMatrixDerived(LINEAR_VEL_KIN_KEY, vel_kin);
-		redis_client.setEigenMatrixDerived(LINEAR_ACC_KIN_KEY, accel_kin);
-		redis_client.setEigenMatrixDerived(QUATERNION_KIN_KEY, ori_quat_kin);
-		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KIN_KEY, avel_kin);
-		redis_client.setEigenMatrixDerived(ANGULAR_ACC_KIN_KEY, aaccel_kin);
+		// redis_client.setEigenMatrixDerived(POSITION_KIN_KEY, pos_kin);
+		// redis_client.setEigenMatrixDerived(LINEAR_VEL_KIN_KEY, vel_kin);
+		// redis_client.setEigenMatrixDerived(LINEAR_ACC_KIN_KEY, accel_kin);
+		// redis_client.setEigenMatrixDerived(QUATERNION_KIN_KEY, ori_quat_kin);
+		// redis_client.setEigenMatrixDerived(ANGULAR_VEL_KIN_KEY, avel_kin);
+		// redis_client.setEigenMatrixDerived(ANGULAR_ACC_KIN_KEY, aaccel_kin);
 
 
-		redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_FORCE_UNBIASED_KEY, force_moment);
+		// redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_FORCE_UNBIASED_KEY, force_moment);
 
-		redis_client.setEigenMatrixDerived(ANGULAR_VEL_TEST, avel_test);
-		redis_client.setEigenMatrixDerived(LINEAR_ACC_TEST, accel_test);
-		redis_client.setEigenMatrixDerived(ANGULAR_ACC_TEST, aaccel_test);
+		// redis_client.setEigenMatrixDerived(ANGULAR_VEL_TEST, avel_test);
+		// redis_client.setEigenMatrixDerived(LINEAR_ACC_TEST, accel_test);
+		// redis_client.setEigenMatrixDerived(ANGULAR_ACC_TEST, aaccel_test);
 
-		redis_client.setEigenMatrixDerived(JOINT_ANGLE_INPUTS_KEY, q_des);
+		// redis_client.setEigenMatrixDerived(JOINT_ANGLE_INPUTS_KEY, q_des);
 
-		redis_client.setEigenMatrixDerived(JOINT_VELOCITIES_INPUTS_KEY, dq_des);
-		redis_client.setEigenMatrixDerived(JOINT_ACCELERATIONS_INPUTS_KEY, ddq_des);
+		// redis_client.setEigenMatrixDerived(JOINT_VELOCITIES_INPUTS_KEY, dq_des);
+		// redis_client.setEigenMatrixDerived(JOINT_ACCELERATIONS_INPUTS_KEY, ddq_des);
 
 		
   //  		 double end_time = timer.elapsedTime();

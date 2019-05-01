@@ -289,7 +289,7 @@ int main() {
 
 	double lambda_factor = 0.07;
 	double lambda_factor_2 = 0.07;
-	Matrix3d Lambda = lambda_factor*Matrix3d::Identity(6,6);
+	MatrixXd Lambda = lambda_factor*MatrixXd::Identity(6,6);
 	MatrixXd Lambda_2 = lambda_factor_2 * MatrixXd::Identity(6,6);
 	// Lambda << 0.014,  0.0, 0.0, 0.0, 0.0, 0.0,
 	// 		    0.0, 0.014, 0.0, 0.0, 0.0, 0.0,

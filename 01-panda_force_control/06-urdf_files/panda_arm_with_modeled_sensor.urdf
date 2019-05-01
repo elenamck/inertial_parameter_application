@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<robot name="panda_sensor">
+<robot name="panda_modeled_sensor">
 
     <link name="link0">
       <inertial>
