@@ -370,7 +370,9 @@ int main() {
 
 	double lambda_factor = 0.03;
 
-	Matrix3d Lambda = lambda_factor*Matrix3d::Identity(6,6);
+	MatrixXd Lambda = MatrixXd::Identity(6,6);
+
+	Lambda *= lambda_factor;
 
 	int filter_size = 4;
 
@@ -473,7 +475,7 @@ int main() {
 			phi_RLS = RLS->getInertialParameterVector();
 			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-			cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
+			// cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
 
 
 			}
