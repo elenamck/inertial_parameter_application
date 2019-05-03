@@ -6,10 +6,12 @@
 //  Copyright 2018 Chair of Applied Mechanics, TUM. All rights reserved.
 //
 
-#pragma once
+// #pragma once
 
-#include <xdebug.h>
-#include <xstdio.h>
+// #include <xdebug.h>
+// #include <xstdio.h>
+#include <iostream>
+#include <stdexcept>
 
 namespace am2b {
 
@@ -53,7 +55,7 @@ public:
 
             // Stability margin
             if (m_T < m_dt / 2) {
-                perr_ffl("Time constant lower than half of sample time, saturating value...\n");
+                throw std::runtime_error("Time constant lower than half of sample time, saturating value...\n");
                 m_T = m_dt / 2;
             }
 

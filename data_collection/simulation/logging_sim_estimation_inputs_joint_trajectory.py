@@ -17,7 +17,7 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # data files
-folder = 'inertial_params_est/'
+folder = 'FINAL_ESTIMATION/'
 # folder = 'simulation/'
 #folder = 'test/'
 if not os.path.exists(folder):
@@ -34,7 +34,7 @@ name = "data_file"
 file = open(folder + '/' + name + '_' + timestamp,'w')
 filename = name + '_' + timestamp
 # all kinematic variables in frame of last link
-file.write ('pos\t vel\t accel\t ori\t avel\t aaccel\t force_torque \t phi\t q \t dq \t q_des \t dq_des\n')
+file.write ('pos\t vel\t accel\t ori\t avel\t aaccel\t force_torque \t phi\t q \t dq \t ddq \t q_des \t dq_des \t ddq_des \n')
 # open redis server
 r_server = redis.StrictRedis(host='localhost', port=6379, db=0)
 

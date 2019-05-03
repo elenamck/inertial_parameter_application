@@ -27,6 +27,10 @@ public:
 	* @param aaccel_local 			angular acceleration with respect to frame
 	* @param g_local 				gravity with respect to force sensor frame
 	*/
+
+	void init();
+
+
 	void addData(const Eigen::VectorXd& force_measurment, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
 
 	/**
@@ -100,7 +104,9 @@ public:
 	Eigen::VectorXd getCurrentInputVector();
 	Eigen::MatrixXd getCurrentDataMatrixStacked();
 	Eigen::VectorXd getCurrentInputVectorStacked();
-
+	Eigen::MatrixXd getCurrentGainMatrix();
+	Eigen::MatrixXd getCurrentParameterCovarianceMatrix();
+	Eigen::MatrixXd getCurrentNoiseCovarianceMatrix();
 
 private:
 

@@ -80,30 +80,33 @@ int main() {
 	std::random_device rd;
 	static std::mt19937 gen(rd());  //here you could also set a seed
 	// static std::normal_distribution<double> dis(0.0,1.0);
-	static std::uniform_real_distribution<double> dis(-0.8, 0.8);
+	static std::uniform_real_distribution<double> dis(-0.3, 0.3);
 
-	int axis = 4; 
-	int N = 3; 
+	int axis = 3; 
+	int N = 4; 
 	double w_s = 1000;
-	double w_f = 0.6; 
+	double w_f = 0.5; 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
 
 	a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
-	// b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
+	b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
 
 	VectorXd q_lim_max_all = VectorXd::Zero(7);
 	VectorXd q_lim_min_all = VectorXd::Zero(7);
 	// q_lim_max_all <<  2.8973,  1.7628,  2.8973, -0.0698,  2.8973,  3.7525,  2.8973;	
 	// q_lim_min_all << -2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973;
-
-	q_lim_max_all <<  2.7,  1.6,  2.7, 0.1,  2.7,  3.6,  2.7;	
-	q_lim_min_all << -2.7, -1.6, -2.7, -2.9, -2.7, 0.1, -2.7;
+	q_lim_max_all <<  2.6,  1.5,  2.5, 0.0,  2.5,  3.6,  2.5;	
+	q_lim_min_all << -2.6, -1.5, -2.5, -2.6, -2.5, -0.0, -2.5;
+	// q_lim_max_all <<  2.7,  1.6,  2.7, 0.1,  2.7,  3.6,  2.7;	
+	// q_lim_min_all << -2.7, -1.6, -2.7, -2.9, -2.7, 0.1, -2.7;
 	VectorXd dq_lim_max_all = VectorXd::Zero(7);
-	dq_lim_max_all <<  2.1750, 2.1750, 2.1750, 2.1750,  2.6100, 2.6100,  2.6100;	
+	// dq_lim_max_all <<  2.1750, 2.1750, 2.1750, 2.1750,  2.6100, 2.6100,  2.6100;	
+	dq_lim_max_all <<  2.0, 2.0, 2.0, 2.0,  2.200, 2.200,  2.200;	
 
 	VectorXd ddq_lim_max_all = VectorXd::Zero(7);
-	ddq_lim_max_all <<  15, 7.5, 10, 12.5,  15, 20,  20;	
+	// ddq_lim_max_all <<  15, 7.5, 10, 12.5,  15, 20,  20;	
+	ddq_lim_max_all <<  12, 6, 7, 10,  12, 15,  17;	
 
 	VectorXd q_lim_max = VectorXd::Zero(axis);
 	VectorXd q_lim_min = VectorXd::Zero(axis);
@@ -119,7 +122,9 @@ int main() {
 
 	VectorXd desired_initial_configuration_all = VectorXd::Zero(7);
 	desired_initial_configuration_all << 0,  -45, 0, -115, 0, 60, 60;
-	desired_initial_configuration_all *= M_PI/180.0;
+	// desired_initial_configuration_all *= M_PI/180.0;
+	// desired_initial_configuration_all << -0.35,0.0,0.0,-1.5,0.0,1.5,1.6;
+	// desired_initial_configuration_all <<  -.11, .032, -.05, -1.93, -1.63,1.46,1.75;
 	VectorXd desired_initial_configuration = desired_initial_configuration_all.tail(axis);
 
 	unsigned long trajectory_counter = 0;
@@ -142,7 +147,7 @@ int main() {
 	MatrixXd A_data = MatrixXd::Zero(6,10); //Data matrix
 	Matrix3d R_link = Matrix3d::Zero();
 	// create a loop timer
-	double control_freq = 1000;
+	double control_freq = 500;
 	LoopTimer timer;
 	timer.setLoopFrequency(control_freq);   // 1 KHz
 	// timer.setThreadHighPriority();  // make timing more accurate. requires running executable as sudo.
@@ -150,7 +155,7 @@ int main() {
 	timer.initializeTimer(1000000); // 1 ms pause before starting loop
 
 	ofstream trajectory_file;
-  	trajectory_file.open ("../../../01-panda_force_control/03-trajectories/sinusoidal_trajectories_04.txt");
+  	trajectory_file.open ("../../../01-panda_force_control/03-trajectories/sinusoidal_trajectories_05.txt");
 
 	// while window is open:
 	while (runloop) {
@@ -178,7 +183,7 @@ int main() {
 			cout << "the limits are reached!" << endl;	
 			
 			a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
-			// b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
+			b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
 			trajectory_counter = 0;
 			joint_trajectory->init(desired_initial_configuration,a,b);
 			least_square->initConditioning();
@@ -224,7 +229,7 @@ int main() {
 
 
 			a = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
-			// b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
+			b = VectorXd::NullaryExpr((N*axis),[&](){return dis(gen);});
 			trajectory_counter = 0;
 			joint_trajectory->init(desired_initial_configuration,a,b);
 			least_square->initConditioning();

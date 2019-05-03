@@ -33,8 +33,8 @@ const std::string robot_name = "FRANKA-PANDA";
 
 unsigned long long controller_counter = 0;
 
-const bool flag_simulation = true;
-// const bool flag_simulation = false;
+// const bool flag_simulation = true;
+const bool flag_simulation = false;
 
 const bool inertia_regularization = true;
 
@@ -151,7 +151,7 @@ int main() {
 	//desired_initial_configuration << -50,  15, 35, -80, -14, 90, 130; //last
 	//desired_initial_configuration << -40,  14, 25, -80, 166, 90, -138;
 	//desired_initial_configuration << -0.702242,0.245541,0.438873,-1.40453,2.88915,1.57993,-2.4062; //in rad
-	desired_initial_configuration <<0.0261516,-0.679051,-0.390236,-2.39528,-0.2708,1.34687,2.3368;
+	desired_initial_configuration <<-0.212803,-0.894344,-0.323602,-2.45985,-0.240155,1.59861,2.3368;
 	//desired_initial_configuration <<-0.704383,0.247327,0.410896,-1.40101,-0.25589,1.58301, 2.40276;
 
 	//desired_initial_configuration *= M_PI/180.0;

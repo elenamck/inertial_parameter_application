@@ -237,18 +237,18 @@ int main() {
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 
 	joint_task->_max_velocity = M_PI/4;
-	joint_task->_kp = 100.0;
-	joint_task->_kv = 1.6 * sqrt(joint_task->_kp);
+	joint_task->_kp = 60.0;
+	joint_task->_kv = 2.0 * sqrt(joint_task->_kp);
 
 
 	VectorXd joint_task_torques = VectorXd::Zero(dof);
 	VectorXd desired_initial_configuration = VectorXd::Zero(dof);
-	desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
-
+	// desired_initial_configuration << 0,  -45, 0, -115, 0, 60, 60;
+ 		desired_initial_configuration << -0.35,0.0,0.0,-1.5,0.0,1.5,1.6;
 	// desired_initial_configuration << 0, 10, 0, -125, 0, 135, 0;
 
 
-	desired_initial_configuration *= M_PI/180.0;
+	// desired_initial_configuration *= M_PI/180.0;
 	joint_task->_goal_position = desired_initial_configuration;
 
 
@@ -270,10 +270,10 @@ int main() {
 	bool linear_case = true;
 	bool non_linear_case = false;
 	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
-	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
+	MatrixXd Lambda = 0.05 * MatrixXd::Identity(6,6);
 
 	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,2,Lambda);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,6,Lambda);
 	auto LS = new ParameterEstimation::LeastSquare(false);
 
 
@@ -365,10 +365,10 @@ int main() {
 
 	// int axis = 4; 
 	// int N = 3; 
-	int axis = 4;
-	int N = 3;
-	double w_s = 1000;
-	double w_f = 0.4; 
+	int axis = 3;
+	int N = 4;
+	double w_s = 700;
+	double w_f = 0.1; 
 	// double w_f = 0.8; 
 	VectorXd q_des = VectorXd::Zero(axis);
 	VectorXd dq_des = VectorXd::Zero(axis);
@@ -376,26 +376,33 @@ int main() {
 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
-	// a << 0.358813, -0.437701,  0.982793,  0.604349,  0.225106,  0.850517, -0.408695,  0.570985,   1.00535, -0.591772, -0.388226, -0.213033;
-	// b << -0.588637, -0.00925619,    0.532357,     1.02669,    0.953303,   -0.672674,   -0.392542 ,   0.490234,    -1.04557 ,   0.996562 ,  -0.343163   , 0.438637;
-	// a << 0, -0.437701,  1.582793,  0,  0.225106,  0.850517, -0.408695, 0;
+               
+// a <<0.102129, 	0.100028, 	-0.103239, 	-0.197122, 	0.00299299, 	0.228966, 	-0.247741, 	-0.225912, 	0.192292, 	-0.213305, 	0.0428326, 	0.203218; 	
+
+
+// b<<0.251651, 	-0.173199, 	-0.22587, 	-0.0206592, 	-0.0599195, 	-0.0188279, 	-0.0912118, 	-0.0189786, 	0.0193988, 	0.057875, 	-0.265487, 	-0.00736166;
+
 	// b << -0.588637, 0,    0.0532357,    0,    0.953303,   -1.672674,   0, 0.490234 ;
  // a << 0.974478 , -0.769762 ,  0.370534 , -0.327473 ,  0.783655 , -0.307155 ,  0.200041,   0.891952  , 0.685765,  -0.689094   , 0.67666 ,-0.0599719,  -0.192114,   0.836484 ,-0.0368847;
 // b <<-0.0587619 , -0.637884  , 0.447126 ,  0.343481 , -0.814954  , 0.554182  , 0.574948  , 0.315083 , 0.0014389,  -0.165644 ,-0.0166339  ,-0.758012  , 0.942208 ,  -0.90314 , -0.374112;
 
 
-// a << -0.934053, 	0.554726, 	0.147692;	
-// b << 0.157019, 	0.822921, 	-0.102832;
-// a << -0.307137, 	0.699636, 	-0.0966319, 	-0.0140335, 	-0.637647, 	0.435327, 	-0.221199, 	-0.42967, 	0.254573, 	-0.404099, 	-0.665026, 	-0.379811, 	0.435619, 	-0.391179, 	-0.11536;
-// b << -0.238391, 	0.418179, 	0.248428, 	0.322399, 	0.2656, 	-0.229715, 	-0.216378, 	0.338296, 	-0.588994, 	0.66866, 	0.690936, 	0.642729, 	-0.272505, 	-0.518133, 	-0.100065;
-	
-a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907198, 	-0.234161, 	-0.374772, 	0.0721155, 	0.191923, 	-0.00187571;	
-// a << 	-0.418301, 	-0.121738, 	0.964821;	
+a <<0.150882, 	0.0912948, 	0.295546, 	-0.213679, 	0.0193946, 	0.262406, 	0.236925, 	0.112823, 	-0.13257, 	0.117539, 	-0.078363, 	-0.0639936;	
 
+b<<-0.194887, 	-0.069047, 	0.0446404, 	0.188067, 	0.289864, 	-0.222172, 	0.108494, 	0.17775, 	-0.0379516, 	0.287974, 	-0.258754, 	0.103094;
+// a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907198, 	-0.234161, 	-0.374772, 	0.0721155, 	0.191923, 	-0.00187571;	
+// a << 	-0.418301, 	-0.121738, 	0.964821;	
+// a << -0.0286409, 	0.0322926, 	0.47785, 	-0.571294, 	0.0973072, 	-0.10507, 	-0.194213, 	-0.327815, 	0.261298, 	-0.659976, 	0.634429, 	0.0897043;
 
 
 // b <<0.164893, 	0.286424, 	-0.270565, 	0.686873, 	-0.102795, 	0.343893, 	0.0232298, 	-0.136117, 	-0.589154, 	0.182915, 	0.389056, 	0.473262;
 
+
+	
+// a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907198, 	-0.234161, 	-0.374772, 	0.0721155, 	0.191923, 	-0.00187571;	
+		//LATEST
+// a << -0.0286409,         0.0322926,       0.47785,         -0.571294,       0.0973072,       -0.10507,        -0.194213,       -0.327815,       0.261298,        -0.659976,       0.634429,        0.0897043;
+// a << 0.259086 ,-0.00621783   , 0.429696 ,  -0.728262,   -0.780967  ,  -0.23069 ,  -0.178586 ,   0.267967 ,  -0.723327  ,  0.641493  , -0.304355  , -0.505646;
 	auto joint_trajectory = new Trajectories::JointSpaceSinusodial(axis, N, w_s, w_f, a,b);
 	VectorXd desired_initial_configuration_trunc = VectorXd::Zero(axis);
 	desired_initial_configuration_trunc = desired_initial_configuration.tail(axis);
@@ -477,7 +484,11 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 		// mean_aaccel->process(aaccel_local_mean, aaccel_local);
 		// mean_g_local->process(g_local_mean, g_local);
 		// mean_force_moment->process(force_moment_mean, force_moment);
-
+		mean_accel->process(accel_local_mean, accel_from_sim);
+		mean_avel->process(avel_local_mean, avel_from_sim);
+		mean_aaccel->process(aaccel_local_mean, aaccel_from_sim);
+		mean_g_local->process(g_local_mean, g_local_from_sim);
+		mean_force_moment->process(force_moment_mean, force_moment);
 
 			// RLS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
 			// A_curr = RLS->getCurrentDataMatrix();
@@ -506,6 +517,7 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 			{
 
 				joint_trajectory->init(desired_initial_configuration_trunc);
+				// RLS->init();
 
 				
 					cout << "Initial Config reached" << endl;
@@ -542,16 +554,22 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 			
 
 
-
-			// LS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
+			if (controller_counter % 2 == 0 )
+			{
+						// LS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
+					RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
+					phi_RLS = RLS->getInertialParameterVector();
+								center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+			}
 			// LS->addData(force_moment, accel_test, avel_test, aaccel_test, g_local);
 // RLS->addData(force_moment, accel_kin, avel_kin, aaccel_kin, g_local);
 			// t_start = std::chrono::high_resolution_clock::now();
 
-			RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
-			phi_RLS = RLS->getInertialParameterVector();
-			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+			// RLS->addData(force_moment, accel_from_sim, avel_from_sim, aaccel_from_sim, g_local_from_sim);
+			// phi_RLS = RLS->getInertialParameterVector();
+			// center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+			// inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
 			// t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
 			// cout << "Elapsed time trajectory update: " << t_elapsed.count() << endl;
 
@@ -570,7 +588,7 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 			
 			trajectory_counter++;
 
-			if ((trajectory_counter/w_s) >= trajectory_counter_multiple *(2*M_PI/w_f)/2 )
+			if ((trajectory_counter/w_s) >= trajectory_counter_multiple *(2*M_PI/w_f))
 			{
 				cout << "excictation period finished" << endl;
 				trajectory_counter_multiple ++; 
@@ -588,7 +606,7 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 
 
 
-		    	// state = REST;
+		    	state = REST;
 		    	// joint_task->_goal_position = desired_initial_configuration;
 			}
 
@@ -596,63 +614,63 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 
 		}
 
-		else if(state == ANGULAR_MOTION)
-		{
-			N_prec.setIdentity();
-			ori_task->updateTaskModel(N_prec);
-			N_prec = ori_task->_N;
-			joint_task->updateTaskModel(N_prec);
-			Matrix3d desired_orientation = Matrix3d::Zero();
-			desired_orientation << 
-			cos(controller_counter/control_freq), -sin (controller_counter/control_freq) , 0,
-			sin(controller_counter/control_freq), cos(controller_counter/control_freq), 0, 
-			0									, 	0								, 1;
+		// else if(state == ANGULAR_MOTION)
+		// {
+		// 	N_prec.setIdentity();
+		// 	ori_task->updateTaskModel(N_prec);
+		// 	N_prec = ori_task->_N;
+		// 	joint_task->updateTaskModel(N_prec);
+		// 	Matrix3d desired_orientation = Matrix3d::Zero();
+		// 	desired_orientation << 
+		// 	cos(controller_counter/control_freq), -sin (controller_counter/control_freq) , 0,
+		// 	sin(controller_counter/control_freq), cos(controller_counter/control_freq), 0, 
+		// 	0									, 	0								, 1;
 
 
-			desired_orientation = R_link * desired_orientation;
-			// ori_task->_desired_orientation = desired_orientation;
-			joint_trajectory->update(controller_counter);
-			VectorXd joint_vel_des = joint_trajectory->getJointVelocities();
-			double joint_vel_des_entry = joint_vel_des(0);
-			ori_task->_desired_angular_velocity = R_link * Vector3d(0.0, 0.0, joint_vel_des_entry);
+		// 	desired_orientation = R_link * desired_orientation;
+		// 	// ori_task->_desired_orientation = desired_orientation;
+		// 	joint_trajectory->update(controller_counter);
+		// 	VectorXd joint_vel_des = joint_trajectory->getJointVelocities();
+		// 	double joint_vel_des_entry = joint_vel_des(0);
+		// 	ori_task->_desired_angular_velocity = R_link * Vector3d(0.0, 0.0, joint_vel_des_entry);
 
 
-			// if(controller_counter % 1000 == 0)
-			// {
-			// 	cout << "joint acceleration" << robot->_ddq.transpose() << endl;
-			// 	cout << "computed acceleration" << aaccel_kin.transpose() << endl; 
-			// 	cout << "desired joint velocity" << joint_vel_des_entry << endl; 
+		// 	// if(controller_counter % 1000 == 0)
+		// 	// {
+		// 	// 	cout << "joint acceleration" << robot->_ddq.transpose() << endl;
+		// 	// 	cout << "computed acceleration" << aaccel_kin.transpose() << endl; 
+		// 	// 	cout << "desired joint velocity" << joint_vel_des_entry << endl; 
 
 
-			// }
-			avel_test = avel_kin;
-			aaccel_test = aaccel_kin;
-			avel_test(0) = 0;
-			avel_test(1) = 0;
-			aaccel_test(0) = 0;
-			aaccel_test(1) = 0; 
+		// 	// }
+		// 	avel_test = avel_kin;
+		// 	aaccel_test = aaccel_kin;
+		// 	avel_test(0) = 0;
+		// 	avel_test(1) = 0;
+		// 	aaccel_test(0) = 0;
+		// 	aaccel_test(1) = 0; 
 
-			RLS->addData(force_moment, accel_test, avel_test, aaccel_test, g_local);
-			phi_RLS = RLS->getInertialParameterVector();
-			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+		// 	RLS->addData(force_moment, accel_test, avel_test, aaccel_test, g_local);
+		// 	phi_RLS = RLS->getInertialParameterVector();
+		// 	center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+		// 	inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
 			
 
-			if(controller_counter%1000==0)
-		{
-			cout << "estimated mass: \n" << phi_RLS(0) << "\n";
-		    cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
-		    cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
+		// 	if(controller_counter%1000==0)
+		// {
+		// 	cout << "estimated mass: \n" << phi_RLS(0) << "\n";
+		//     cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
+		//     cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
 
-		}
+		// }
 
-			ori_task->computeTorques(ori_task_torques);
-			joint_task->computeTorques(joint_task_torques);
+		// 	ori_task->computeTorques(ori_task_torques);
+		// 	joint_task->computeTorques(joint_task_torques);
 
-			command_torques = ori_task_torques + joint_task_torques + coriolis;
+		// 	command_torques = ori_task_torques + joint_task_torques + coriolis;
 
 
-		}
+		// }
 
 
 		else if(state == REST)
@@ -682,7 +700,7 @@ a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
 		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
 
-		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi_RLS);
+		redis_client.setEigenMatrixDerived(INERTIAL_PARAMS_KEY, phi_LS);
 
 		redis_client.setEigenMatrixDerived(POSITION_KIN_KEY, pos_kin);
 		redis_client.setEigenMatrixDerived(LINEAR_VEL_KIN_KEY, vel_kin);

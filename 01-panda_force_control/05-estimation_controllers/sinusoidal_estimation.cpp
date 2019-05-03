@@ -8,6 +8,8 @@
 #include "parameter_estimation/LeastSquare.h"
 #include "trajectories/JointSpaceSinusodial.h"
 #include "filters/MeanFilter.h"
+#include "filters/ButterworthFilter.h"
+#include "filters/SecOrderLowPass.hpp"
 
 #include <signal.h>
 #include <iostream>
@@ -29,6 +31,7 @@ unsigned long long controller_counter = 0;
 
 const bool flag_simulation = true;
 // const bool flag_simulation = false;
+const bool logging_kinematics = false;
 
 const bool inertia_regularization = true;
 // redis keys:
@@ -40,6 +43,9 @@ std::string ANGULAR_ACC_KEY;
 std::string LOCAL_GRAVITY_KEY;
 std::string INERTIAL_PARAMS_KEY;
 std::string EE_FORCE_SENSOR_UNBIASED_KEY;
+std::string POSITION_KEY;
+std::string LINEAR_VEL_KEY;
+
 
 
 // - read:
@@ -60,9 +66,19 @@ string JOINT_ANGLE_INPUTS_KEY;
 string JOINT_VELOCITIES_INPUTS_KEY;
 string JOINT_ACCELERATIONS_INPUTS_KEY;
 
+std::string POSITION_GLOBAL_KEY;
+std::string LINEAR_VEL_GLOBAL_KEY;
+std::string LINEAR_ACC_GLOBAL_KEY;
+std::string ANGULAR_VEL_GLOBAL_KEY;
+std::string ANGULAR_ACC_GLOBAL_KEY;
+
+string 	LINEAR_ACC_LP_KEY;
+string	ANGULAR_VEL_LP_KEY;
+string	ANGULAR_ACC_LP_KEY;
+
 #define  GOTO_INITIAL_CONFIG 	 0
 #define  SINUSODIAL				 1
-#define	 REST 					 3
+#define	 REST 					 2
 
 
 
@@ -103,15 +119,35 @@ int main() {
 		//corrected sensor data(accelerometer: gravity removed, right frame, Gyroscope: right frame)
 		LINEAR_ACC_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel";
 		ANGULAR_VEL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel";
-		ANGULAR_VEL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel";
+		ANGULAR_ACC_KEY = "sai2::DemoApplication::FrankaPanda::controller::aaccel";
+		LOCAL_GRAVITY_KEY = "sai2::DemoApplication::FrankaPanda::controller::g_local";
+
+		INERTIAL_PARAMS_KEY = "sai2::DemoApplication::FrankaPanda::controller::phi";
+
+		JOINT_ANGLE_INPUTS_KEY = "sai2::DemoApplication::FrankaPanda::desired::q";
+		JOINT_VELOCITIES_INPUTS_KEY ="sai2::DemoApplication::FrankaPanda::desired::dq";
+
+		LINEAR_ACC_LP_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel::lowpass";
+		ANGULAR_VEL_LP_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel::lowpass";
+		ANGULAR_ACC_LP_KEY = "sai2::DemoApplication::FrankaPanda::controller::aaccel::lowpass";
+
+
+
 
 		EE_FORCE_SENSOR_UNBIASED_KEY ="sai2::DemoApplication::FrankaPanda::controller::force_moment";	
+		if(logging_kinematics)
+		{	
+
+			POSITION_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos";
+			LINEAR_VEL_KEY = "sai2::DemoApplication::FrankaPanda::controller::vel";
+			POSITION_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos_global";
+ 			LINEAR_VEL_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::vel_global";
+			LINEAR_ACC_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel_global";
+			ANGULAR_VEL_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel_global";
+			ANGULAR_ACC_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::aaccel_global"; 
+		}
 	}
 
-	//Read Bias file and write force torque bias in "force_torque_bias" vector
-	VectorXd force_moment = VectorXd::Zero(6);
-	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
-	ifstream bias;
 
     // start redis client
 	auto redis_client = RedisClient();
@@ -128,6 +164,11 @@ int main() {
 	// read from Redis
 	robot->_q = redis_client.getEigenMatrixJSON(JOINT_ANGLES_KEY);
 	robot->_dq = redis_client.getEigenMatrixJSON(JOINT_VELOCITIES_KEY);
+	if (flag_simulation)
+	{
+		robot->_ddq = redis_client.getEigenMatrixJSON(JOINT_ACCELERATIONS_KEY);
+	}
+
 
 	int dof = robot->dof();
 	VectorXd command_torques = VectorXd::Zero(dof);
@@ -151,7 +192,7 @@ int main() {
 	//joint controller
 	auto joint_task = new Sai2Primitives::JointTask(robot);
 
-	joint_task->_max_velocity = M_PI/4;
+	joint_task->_max_velocity = M_PI/6;
 	joint_task->_kp = 100.0;
 	joint_task->_kv = 1.6 * sqrt(joint_task->_kp);
 
@@ -168,9 +209,13 @@ int main() {
 	//For Inertial Parameter Estimation
 
 	bool non_linear_case = false;
-	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
+	// MatrixXd Lambda = 0.05 * MatrixXd::Identity(6,6);
+	MatrixXd Lambda = 0.07 * MatrixXd::Identity(6,6);
+	MatrixXd Lambda_LP = 0.1 * MatrixXd::Identity(6,6);
 
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,2, Lambda);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,6, Lambda);
+	auto RLS_LP = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,6, Lambda_LP);
+	// auto LS = new ParameterEstimation::LeastSquare(non_linear_case);
 
 
 	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame
@@ -181,9 +226,18 @@ int main() {
 	Vector3d avel_local = Vector3d::Zero(); //object angular velocity in sensor frame
 	Vector3d g_local = Vector3d::Zero(); //gravity vector in sensor frame
 	VectorXd phi_RLS = VectorXd::Zero(10); //inertial parameter vector
+	VectorXd phi_RLS_LP = VectorXd::Zero(10);
 	Vector3d force_sensed = Vector3d::Zero();
 	Matrix3d inertia_tensor_RLS = Matrix3d::Zero();
 	Vector3d center_of_mass_RLS = Vector3d::Zero();
+	Matrix3d inertia_tensor_RLS_LP = Matrix3d::Zero();
+	Vector3d center_of_mass_RLS_LP = Vector3d::Zero();
+
+	Vector3d pos = Vector3d::Zero();
+	Vector3d vel = Vector3d::Zero();
+	Vector3d pos_local = Vector3d::Zero();
+	Vector3d vel_local = Vector3d::Zero();
+
 
 	MatrixXd A_full = MatrixXd::Zero(6,10);
 
@@ -216,9 +270,11 @@ int main() {
 
     // Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-6, 1.0e-6, 1.0e-6, 1.0e-4, 1.0e-4, 1.0e-4; -------------------TODO check which are better!--------------------------
     // R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-3, 1.0e-3, 1.0e-3;
+    Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-6, 1.0e-6, 1.0e-6, 1.0e-4, 1.0e-4, 1.0e-4;
 
-    Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-7, 1.0e-7, 1.0e-7, 1.0e-6, 1.0e-6, 1.0e-6;
+    // Q.diagonal() << 1.0e-8, 1.0e-8, 1.0e-8, 1.0e-7, 1.0e-7, 1.0e-7, 1.0e-6, 1.0e-6, 1.0e-6;
     R.diagonal() << 1.0e-12, 1.0e-12, 1.0e-12, 1.0e-2, 1.0e-2, 1.0e-2;
+
     auto kalman_filter = new KalmanFilters::KalmanFilter(dt, A, C, Q, R, P);
 
 
@@ -264,7 +320,14 @@ int main() {
 				    0,  1,  0;
 	Matrix3d R_link = Matrix3d::Zero();
 
-	bias.open("../../02-utilities/FT_data1.txt");
+
+	//Read Bias file and write force torque bias in "force_torque_bias" vector
+	VectorXd force_moment = VectorXd::Zero(6);
+	VectorXd force_moment_filtered = VectorXd::Zero(6);
+	VectorXd force_torque_bias = VectorXd::Zero(6); //FT Bias
+	ifstream bias;
+
+	bias.open("../../../02-utilities/FT_data1.txt");
 	if (!bias)  
 	{                     // if it does not work
         cout << "Can't open Data!" << endl;
@@ -284,24 +347,75 @@ int main() {
 	//for sinusodial trajectories
 	int axis = 4;
 	int N = 3;
-	double w_s = 1000;
-	double w_f = 0.4; 
+	double w_s = control_freq;
+	double w_f = 0.8; 
 	VectorXd q_des = VectorXd::Zero(axis);
 	VectorXd dq_des = VectorXd::Zero(axis);
 	VectorXd ddq_des = VectorXd::Zero(axis);
 
 	VectorXd a = VectorXd::Zero(N*axis);
 	VectorXd b = VectorXd::Zero(N*axis);
-	a <<-0.590865, 	0.274173, 	-0.242807, 	-0.530158, 	-0.549219, 	0.537474, 	0.0907198, 	-0.234161, 	-0.374772, 	0.0721155, 	0.191923, 	-0.00187571;	
+	// a << -0.0286409,         0.0322926,       0.47785,         -0.571294,       0.0973072,       -0.10507,        -0.194213,       -0.327815,       0.261298,        -0.659976,       0.634429,        0.0897043;
+	// a<< 0.259086 ,-.00621783   , 0.429696 ,  -0.728262,   -0.780967  ,  -0.23069 ,  -0.178586 ,   0.267967 ,  -0.723327  ,  0.641493  , -0.304355  , -0.505646;
+a << -0.0271468, 	0.0998505, 	-0.0669353, 	-0.410767, 	0.354131, 	-0.13737, 	0.330701, 	0.315941, 	0.276246, 	0.578735, 	-0.637234, 	-0.348602; 	
+
 	auto joint_trajectory = new Trajectories::JointSpaceSinusodial(axis, N, w_s, w_f, a,b);
 	VectorXd desired_initial_configuration_trunc = VectorXd::Zero(axis);
 	desired_initial_configuration_trunc = desired_initial_configuration.tail(axis);
 	joint_trajectory->init(desired_initial_configuration_trunc);
-	cout << "desired_initial_configuration_trunc " << desired_initial_configuration_trunc << endl;
+	// cout << "desired_initial_configuration_trunc " << desired_initial_configuration_trunc << endl;
 	unsigned int long trajectory_counter = 0;
 	int trajectory_counter_multiple = 1;
 	joint_trajectory->update(trajectory_counter);
 	joint_task->_desired_velocity.tail(axis) = joint_trajectory->getJointVelocities();
+
+	const int window_size = 2;
+	auto mean_accel = new Filters::MeanFilter(window_size,3);
+	auto mean_avel = new Filters::MeanFilter(window_size,3);
+	auto mean_aaccel = new Filters::MeanFilter(window_size,3);
+	auto mean_g_local = new Filters::MeanFilter(window_size,3);
+	auto mean_force_moment = new Filters::MeanFilter(window_size,6);
+
+	VectorXd accel_local_mean = VectorXd::Zero(3);
+	VectorXd avel_local_mean = VectorXd::Zero(3);
+	VectorXd aaccel_local_mean = VectorXd::Zero(3);
+	VectorXd g_local_mean = VectorXd::Zero(3);
+	VectorXd force_moment_mean = VectorXd::Zero(6);
+
+	//cutoff frequeny, try frequency of trajectory
+	double fc = 0.6;
+	//normalized cutoff frequeency, for butterworth
+	double fc_n = fc / (0.5*control_freq);
+
+	//time constant, for lowpassfilter
+	double tau = 1/(2*M_PI*0.7);
+
+	double fc_f = 0.6; 
+	double fc_t = 0.6; 
+
+
+
+	// auto force_filter = new ButterworthFilter(3);
+	// force_filter->setCutoffFrequency(fc_n);
+	auto force_moment_filter = new ButterworthFilter(6);
+	force_moment_filter->setCutoffFrequency(fc_f/(0.5*control_freq));
+
+	auto accel_butter_filter = new ButterworthFilter(3);
+	accel_butter_filter->setCutoffFrequency(fc_n);
+
+	auto avel_butter_filter = new ButterworthFilter(3);
+	avel_butter_filter->setCutoffFrequency(fc_n);
+
+	auto accel_low_pass_filter = new am2b::SecOrderLowPass<Vector3d>(Vector3d::Zero());
+	accel_low_pass_filter->init(1/control_freq, tau,0.7);
+	Vector3d accel_lp_filtered = Vector3d::Zero();
+
+	auto avel_low_pass_filter = new am2b::SecOrderLowPass<Vector3d>(Vector3d::Zero());
+	avel_low_pass_filter->init(1/control_freq, tau,0.8);
+	Vector3d avel_lp_filtered = Vector3d::Zero();
+	Vector3d aaccel_lp_filtered = Vector3d::Zero();
+
+
 
 
 	// create timer
@@ -327,9 +441,6 @@ int main() {
 
 			robot->updateModel();
 			robot->coriolisForce(coriolis);
-			robot->linearAcceleration(accel,link_name, Eigen::Vector3d::Zero());
-			robot->angularAcceleration(aaccel,link_name);
-			robot->angularVelocity(avel,link_name);
 			accel_local = redis_client.getEigenMatrixJSON(LINEAR_ACC_KEY);
 			avel_local = redis_client.getEigenMatrixJSON(ANGULAR_VEL_KEY);
 			aaccel_local = redis_client.getEigenMatrixJSON(ANGULAR_ACC_KEY);
@@ -352,31 +463,56 @@ int main() {
 
 			coriolis = redis_client.getEigenMatrixJSON(CORIOLIS_KEY);
 			force_moment -= force_torque_bias;
+			force_moment_filtered =  force_moment_filter->update(force_moment);
 
-			robot->position(current_position_aux, link_name, Vector3d::Zero());
-			current_position_aux = R_link.transpose()*current_position_aux;
+			// robot->position(current_position_aux, link_name, pos_in_link);
+			// current_position_aux = R_link.transpose()*current_position_aux;
 			accel_aux = redis_client.getEigenMatrixJSON(ACCELEROMETER_DATA_KEY);
+			avel_aux = redis_client.getEigenMatrixJSON(GYROSCOPE_DATA_KEY);
+
 			accel_aux = R_acc_in_ft*accel_aux;
 			accel_aux *= 9.81;
 			accel_aux += g_local;
-			y << current_position_aux, accel_aux;
-            kalman_filter->update(y);
-            kf_states = kalman_filter->state();
-            accel_local << kf_states(6), kf_states(7), kf_states(8);
-
-            avel_aux = redis_client.getEigenMatrixJSON(GYROSCOPE_DATA_KEY);
             avel_aux = R_acc_in_ft*avel_aux;
-            avel_aux *= M_PI/180;
 
-            q_eff = R_link.transpose();
-			q_eff_aux << q_eff.w(), q_eff.vec();
+			accel_local = accel_butter_filter->update(accel_aux);
+			accel_lp_filtered = accel_low_pass_filter->process(accel_aux);
+			// y << current_position_aux, accel_aux;
+   //          kalman_filter->update(y);
+   //          kf_states = kalman_filter->state();
+   //          accel_local << kf_states(6), kf_states(7), kf_states(8);
 
-			y_ekf << q_eff_aux, avel_aux;
-			extended_kalman_filter-> update(y_ekf);
-			ekf_states = extended_kalman_filter->state();
-			avel_local << ekf_states(4), ekf_states(5), ekf_states(6);
-			aaccel_local << ekf_states(7), ekf_states(8), ekf_states(9);
+   //          avel_aux *= M_PI/180;
+            avel_local = avel_butter_filter->update(avel_aux);
+            avel_lp_filtered = avel_low_pass_filter->process(avel_aux);
+            aaccel_lp_filtered = avel_low_pass_filter->getDerivative();
+   //          q_eff = R_link;
+			// q_eff_aux << q_eff.w(), q_eff.vec();
 
+			// y_ekf << q_eff_aux, avel_aux;
+			// extended_kalman_filter-> update(y_ekf);
+			// ekf_states = extended_kalman_filter->state();
+			// avel_local << ekf_states(4), ekf_states(5), ekf_states(6);
+			// aaccel_local << ekf_states(7), ekf_states(8), ekf_states(9);
+			//----------------------------------------------------------
+
+		// robot->linearAcceleration(accel,link_name, pos_in_link);
+		robot->angularAcceleration(aaccel,link_name);
+		// robot->angularVelocity(avel,link_name);
+		// //get object acc in sensor frame
+		// accel_local = R_link.transpose()*accel;
+		aaccel_local = R_link.transpose()*aaccel;
+		// cout << "aaccel_local" << aaccel_local.transpose() << endl;
+		//get object velocity in sensor frame
+		// avel_local = R_link.transpose()*avel;
+
+		if(logging_kinematics)
+		{
+			robot->position(pos,link_name, pos_in_link);
+			robot->linearVelocity(vel,link_name, pos_in_link);
+			pos_local = R_link.transpose() * pos;
+			vel_local = R_link.transpose() * vel;
+		}
 
 		}
 		t_start = std::chrono::high_resolution_clock::now();
@@ -397,7 +533,7 @@ int main() {
 			command_torques = joint_task_torques + coriolis;
 
 			VectorXd config_error = desired_initial_configuration - joint_task->_current_position;
-			if(config_error.norm() < 0.01)
+			if(config_error.norm() < 0.1)
 			{
 
 				joint_trajectory->init(desired_initial_configuration_trunc);
@@ -429,19 +565,63 @@ int main() {
 			joint_task->_goal_position.tail(axis) = q_des;
 			joint_task->_desired_velocity.tail(axis)= dq_des;
 
+			// mean_accel->process(accel_local_mean, accel_local);
+			// mean_avel->process(avel_local_mean, avel_local);
+			// mean_aaccel->process(aaccel_local_mean, aaccel_local);
+			// mean_g_local->process(g_local_mean, g_local);
+			// mean_force_moment->process(force_moment_mean, force_moment);
 
-			RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
-			phi_RLS = RLS->getInertialParameterVector();
-			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
-			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
-			// t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
+
+			if (controller_counter % 2 == 0 )
+			{	
+			mean_accel->process(accel_local_mean, accel_local);
+			mean_avel->process(avel_local_mean, avel_local);
+			mean_aaccel->process(aaccel_local_mean, aaccel_local);
+			mean_g_local->process(g_local_mean, g_local);
+			mean_force_moment->process(force_moment_mean, force_moment);
+			}
+			if(controller_counter % 2 == 0)
+			{
+				// RLS->addData(force_moment_mean, accel_local_mean, avel_local_mean, aaccel_local_mean, g_local_mean);
+				// RLS->addData(force_moment_filtered, accel_local, avel_local, aaccel_lp_filtered, g_local);
+
+				if(flag_simulation)
+				{
+					RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+				}
+				else{
+									RLS->addData(force_moment_filtered, accel_local, avel_local, aaccel_lp_filtered, g_local);
+				RLS_LP->addData(force_moment_filtered, accel_lp_filtered, avel_lp_filtered, aaccel_lp_filtered, g_local);
+				}
+
+				// LS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+				phi_RLS = RLS->getInertialParameterVector();
+				center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+				inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+
+				phi_RLS_LP = RLS_LP->getInertialParameterVector();
+				center_of_mass_RLS_LP << phi_RLS_LP(1)/phi_RLS_LP(0), phi_RLS_LP(2)/phi_RLS_LP(0), phi_RLS_LP(3)/phi_RLS_LP(0); 
+				inertia_tensor_RLS_LP << phi_RLS_LP(4), phi_RLS_LP(5), phi_RLS_LP(6), phi_RLS_LP(5), phi_RLS_LP(7), phi_RLS_LP(8), phi_RLS_LP(6), phi_RLS_LP(8), phi_RLS_LP(9);
+
+
+			}
+		
+			// RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+			// phi_RLS = RLS->getInertialParameterVector();
+			// center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
+			// inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+			// // t_elapsed =  std::chrono::high_resolution_clock::now() - t_start;
 			// cout << "Elapsed time trajectory update: " << t_elapsed.count() << endl;
 
 			if(controller_counter%1000==0)
 			{
-				cout << "estimated mass: \n" << phi_RLS(0) << "\n";
-		  	  	cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << "\n";
-		   		cout << "estimated Inertia: \n" << inertia_tensor_RLS << "\n";
+				cout << "estimated mass: \n" << phi_RLS(0) << endl;
+		  	  	cout << "estimated center of mass: \n" << 	center_of_mass_RLS.transpose() << endl;
+		   		cout << "estimated Inertia: \n" << inertia_tensor_RLS << endl;
+
+		   		cout << "estimated mass LP: \n" << phi_RLS_LP(0) << endl;
+		  	  	cout << "estimated center of mass LP: \n" << 	center_of_mass_RLS_LP.transpose() << endl;
+		   		cout << "estimated Inertia LP: \n" << inertia_tensor_RLS_LP << endl;
 			}
 
 			// compute task torques
@@ -452,10 +632,24 @@ int main() {
 			
 			trajectory_counter++;
 
-			if ((trajectory_counter/w_s) >= trajectory_counter_multiple *(2*M_PI/w_f)/2 )
+			if ((trajectory_counter/w_s) >= trajectory_counter_multiple *(2*M_PI/w_f) )
 			{
 				cout << "excictation period finished" << endl;
+
+				// phi_LS = LS->getInertialParameterVector();
+				// center_of_mass_LS << phi_LS(1)/phi_LS(0), phi_LS(2)/phi_LS(0), phi_LS(3)/phi_LS(0); 
+				// inertia_tensor_LS << phi_LS(4), phi_LS(5), phi_LS(6), phi_LS(5), phi_LS(7), phi_LS(8), phi_LS(6), phi_LS(8), phi_LS(9);
+				// cout << "estimated mass LS: \n" << phi_LS(0) << endl;
+		  // 	  	cout << "estimated center of mass LS: \n" << 	center_of_mass_LS.transpose() << endl;
+		  //  		cout << "estimated Inertia LS: \n" << inertia_tensor_LS << endl;
+
+				// state = REST;
 				trajectory_counter_multiple ++; 
+				// RLS->init();
+				if (trajectory_counter_multiple == 3)
+				{
+					state = REST;
+				}
 
 			}
 
@@ -463,12 +657,42 @@ int main() {
 
 		}
 
+		else if(state == REST)
+		{
+
+			N_prec.setIdentity();
+			joint_task->updateTaskModel(N_prec);
+			// compute torques
+			joint_task->computeTorques(joint_task_torques);
+
+			command_torques = joint_task_torques   + coriolis;
+
+			}
+
 
 		redis_client.setEigenMatrixDerived(JOINT_TORQUES_COMMANDED_KEY, command_torques);
-		redis_client.setEigenMatrixDerived(LINEAR_ACC_KEY, accel_local);
-		redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
-		redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
-		redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
+		if(logging_kinematics)
+		{	
+			redis_client.setEigenMatrixDerived(POSITION_KEY, pos_local);
+			redis_client.setEigenMatrixDerived(LINEAR_VEL_KEY, vel_local);
+			// redis_client.setEigenMatrixDerived(POSITION_GLOBAL_KEY, pos);
+			// redis_client.setEigenMatrixDerived(LINEAR_VEL_GLOBAL_KEY, vel);
+			// redis_client.setEigenMatrixDerived(LINEAR_ACC_GLOBAL_KEY, accel);
+			// redis_client.setEigenMatrixDerived(ANGULAR_VEL_GLOBAL_KEY, avel);
+			// redis_client.setEigenMatrixDerived(ANGULAR_ACC_GLOBAL_KEY, aaccel);
+
+		}
+		if(!flag_simulation)
+		{
+			redis_client.setEigenMatrixDerived(LINEAR_ACC_KEY, accel_local);
+			redis_client.setEigenMatrixDerived(ANGULAR_VEL_KEY, avel_local);
+			redis_client.setEigenMatrixDerived(ANGULAR_ACC_KEY, aaccel_local);
+			redis_client.setEigenMatrixDerived(LOCAL_GRAVITY_KEY, g_local);
+			redis_client.setEigenMatrixDerived(LINEAR_ACC_LP_KEY, accel_lp_filtered);
+			redis_client.setEigenMatrixDerived(ANGULAR_VEL_LP_KEY, avel_lp_filtered);
+			redis_client.setEigenMatrixDerived(ANGULAR_ACC_LP_KEY, aaccel_lp_filtered);
+		}
+
 
 		redis_client.setEigenMatrixDerived(EE_FORCE_SENSOR_UNBIASED_KEY, force_moment);
 
