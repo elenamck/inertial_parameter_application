@@ -461,10 +461,9 @@ Eigen::MatrixXd RecursiveLeastSquare::getCurrentParameterCovarianceMatrix()
 
 Eigen::MatrixXd RecursiveLeastSquare::getCurrentNoiseCovarianceMatrix()
 {
-	if(_linear_case==false)
-	{
+
 		return _Lambda;
-	}
+
 
 }
 
