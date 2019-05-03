@@ -289,7 +289,7 @@ int main() {
 
 	double lambda_factor = 0.07;
 	double lambda_factor_2 = 0.07;
-	Matrix3d Lambda = lambda_factor*Matrix3d::Identity(6,6);
+	MatrixXd Lambda = lambda_factor*MatrixXd::Identity(6,6);
 	MatrixXd Lambda_2 = lambda_factor_2 * MatrixXd::Identity(6,6);
 	// Lambda << 0.014,  0.0, 0.0, 0.0, 0.0, 0.0,
 	// 		    0.0, 0.014, 0.0, 0.0, 0.0, 0.0,
@@ -298,10 +298,11 @@ int main() {
 	//           0.014, 0.0, 0.0, 0.0, 0.012, 0.0,
 	//           0.014, 0.0, 0.0, 0.0, 0.0, 0.017;
 
-	int filter_size = 10;
+	int filter_size = 3;
 	int filter_size_2 =10;
 
 	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,filter_size_2,Lambda_2);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,filter_size,Lambda);
 
 
 	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame
@@ -316,6 +317,9 @@ int main() {
 	Vector3d force_sensed = Vector3d::Zero();
 	Matrix3d inertia_tensor_RLS = Matrix3d::Zero();
 	Vector3d center_of_mass_RLS = Vector3d::Zero();
+	Matrix3d inertia_tensor_RLS_2 = Matrix3d::Zero();
+	Vector3d center_of_mass_RLS_2 = Vector3d::Zero();
+
 
 
 
@@ -409,23 +413,42 @@ int main() {
 			if(controller_counter%2 == 0)
 			{
 				RLS_2->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+				phi_RLS_2 = RLS_2->getInertialParameterVector();
 
-				phi_RLS = RLS_2->getInertialParameterVector();
+
+				RLS->addData(force_moment, accel_local, avel_local, aaccel_local, g_local);
+				phi_RLS = RLS->getInertialParameterVector();
 
 
-			cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
-
-			// cout << "current inertial parameters for filter size  " <<  filter_size << " and lambda_factor: " << lambda_factor << " is: "<<  phi_RLS.transpose() << endl; 
-
+			// cout << "ft: " <<  force_moment.transpose() << " a: " << accel_local.transpose() << " omega: "<<  avel_local.transpose() << " alpha: " << aaccel_local.transpose() << " phi " << phi_RLS.transpose() << endl; 
 			center_of_mass_RLS << phi_RLS(1)/phi_RLS(0), phi_RLS(2)/phi_RLS(0), phi_RLS(3)/phi_RLS(0); 
 			inertia_tensor_RLS << phi_RLS(4), phi_RLS(5), phi_RLS(6), phi_RLS(5), phi_RLS(7), phi_RLS(8), phi_RLS(6), phi_RLS(8), phi_RLS(9);
+			// cout << "1 current inertial parameters for filter size  " <<  filter_size << " and lambda_factor: " << lambda_factor << " mass: "<<  phi_RLS(0) << " center of mass: " << center_of_mass_RLS.transpose() << " inertia tensor:  "  << inertia_tensor_RLS << endl; 
+
+			center_of_mass_RLS_2 << phi_RLS_2(1)/phi_RLS_2(0), phi_RLS_2(2)/phi_RLS_2(0), phi_RLS_2(3)/phi_RLS_2(0); 
+			inertia_tensor_RLS_2 << phi_RLS_2(4), phi_RLS_2(5), phi_RLS_2(6), phi_RLS_2(5), phi_RLS_2(7), phi_RLS_2(8), phi_RLS_2(6), phi_RLS_2(8), phi_RLS_2(9);
+
+			// cout << "2 current inertial parameters for filter size  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 <<  " mass: "<<  phi_RLS(0) << " center of mass: " << center_of_mass_RLS_2.transpose() << " inertia tensor:  "  << inertia_tensor_RLS_2 << endl; 
 
 			}
 
 
 
 		}
+if (controller_counter % 500 == 0)
+{
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
 
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
+			
+}
 
 
 		if(state == GOTO_INITIAL_CONFIG)
@@ -478,9 +501,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 				posori_task->_goal_position = pos_des_2;
 			    joint_task->_goal_position(6) += 2.0*M_PI;
@@ -513,9 +543,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 				posori_task->_goal_position = pos_des_3;
 			    joint_task->_goal_position(6) -= 2.0*M_PI;
@@ -546,9 +583,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 				posori_task->_goal_position = pos_des_4;
 			    joint_task->_goal_position(6) += 2.0*M_PI;
@@ -583,9 +627,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -618,9 +669,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -650,9 +708,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -683,9 +748,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -716,9 +788,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -749,9 +828,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -782,9 +868,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 			
 			    joint_task->_goal_position(6) = M_PI;
 
@@ -815,9 +908,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -848,9 +948,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -881,9 +988,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -914,9 +1028,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    joint_task->_goal_position(6) += 2.0*M_PI;
 
@@ -947,9 +1068,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    joint_task->_goal_position(6) = -M_PI;
 
@@ -978,10 +1106,17 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
 				posori_task->_goal_position = pos_des_2;
-
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
+			
 
 			    state = POS_2;
 				
@@ -1011,9 +1146,16 @@ int main() {
 				posori_task->_goal_position = pos_des_3;
 
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    state = POS_3;
 				
@@ -1043,9 +1185,16 @@ int main() {
 				posori_task->_goal_position = pos_des_4;
 
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    state = POS_4;
 				
@@ -1074,9 +1223,16 @@ int main() {
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
 				posori_task->_goal_position = pos_des_5;
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    state = POS_5;
 				
@@ -1104,9 +1260,16 @@ int main() {
 				posori_task->reInitializeTask();
 				posori_task->enableVelocitySaturation(vel_sat, avel_sat);    
 
+				cout << "RLS_1 for filter size:  " <<  filter_size << " and lambda_factor: " << lambda_factor << endl;
 				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS(0) << endl;
 			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS.transpose() << endl;
 			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS << endl;
+
+
+				cout << "RLS_2 for filter size:  " <<  filter_size_2 << " and lambda_factor: " << lambda_factor_2 << endl;
+				cout << "for state " << state << " the estimated mass is: \n" << phi_RLS_2(0) << endl;
+			    cout << "for state " << state << " the estimated center of mass is: \n" << center_of_mass_RLS_2.transpose() << endl;
+			    cout << "for state " << state << " the estimated inertia tensor is: \n" << inertia_tensor_RLS_2 << endl;
 
 			    state = GOTO_INITIAL_CONFIG;
 				
