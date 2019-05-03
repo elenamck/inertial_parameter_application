@@ -17,7 +17,7 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # data files
-folder = 'inertial_params_est/'
+folder = 'FINAL_ESTIMATION/'
 # folder = 'simulation/'
 #folder = 'test/'
 if not os.path.exists(folder):

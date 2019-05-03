@@ -35,7 +35,7 @@ file = open(folder + '/' + name + '_' + timestamp,'w')
 
 
 
-file.write (' angular vel\t  linear acc \n')
+file.write (' angular vel\t  linear acc \tlinear acceleration linear acceleration')
 # open redis server
 r_server = redis.StrictRedis(host='localhost', port=6379, db=0)
 
