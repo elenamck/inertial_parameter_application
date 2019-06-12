@@ -123,6 +123,11 @@ public:
         return (m_x - m_x1) * (1.0 / m_dt);
     }
 
+    T getDerivativeSecondOrderApproximation()
+    {
+        return (3 * m_x  - 4 * m_x1 + m_x2) / (2.0 * m_dt);
+    }
+
     //! Returns the second derivative of the filter output
     T getSecondDerivative()
     {

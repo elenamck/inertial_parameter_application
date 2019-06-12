@@ -6,9 +6,13 @@
 //  Copyright 2018 Chair of Applied Mechanics, TUM. All rights reserved.
 //
 
-#include <vector>
+// #include <vector>
 
-#pragma once
+// #pragma once
+
+
+#include <iostream>
+#include <stdexcept>
 
 namespace am2b {
 

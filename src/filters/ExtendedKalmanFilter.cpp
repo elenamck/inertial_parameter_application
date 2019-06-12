@@ -35,7 +35,7 @@ void ExtendedKalmanFilter::init() {
 void ExtendedKalmanFilter::init(double t0, const Eigen::VectorXd& x0){
 	x_hat = x0;
 	P = P0; //Try P0 = I
-	this->t0 = t0;
+	_t0 = t0;
 	t = t0;
 	initialized = true;
 }
@@ -59,9 +59,9 @@ void ExtendedKalmanFilter::update(const Eigen::VectorXd& y){
 
 void ExtendedKalmanFilter::update(const Eigen::VectorXd& y, double dt, 
 							      const Eigen::VectorXd f, const Eigen::MatrixXd F){
-	this->f = f;
-	this->F = F;
-	this->dt = dt;
+	_f = f;
+	_F = F;
+	_dt = dt;
 	update(y);
 }
 

@@ -5,7 +5,7 @@
 
 namespace ParameterEstimation
 {
-LeastSquare::LeastSquare(bool lin)
+LeastSquare::LeastSquare()
 {	
 	_accel_local.setZero();
 	_aaccel_local.setZero();
@@ -13,18 +13,11 @@ LeastSquare::LeastSquare(bool lin)
 	_g_local.setZero();
 	_A_curr.setZero(6,10);
 	_A.setZero(6,10); 
-	_A_lin_curr.setZero(3,4);
-	_A_lin.setZero(3,4);
 	_phi.setZero(10);
-	_phi_lin.setZero(4); 
 	_ft.setZero(6); 
 	_FT.setZero(6); 
-	_f.setZero();
-	_F.setZero(3); 
 	_ft_contact.setZero(6); 
-	_f_contact.setZero(); 
 	_n_measurements = 0;
-	_linear_case = lin;
 	_A_conditioning.setZero(10,6);
 }
 
@@ -35,16 +28,9 @@ void LeastSquare::addData(const Eigen::VectorXd& force_measurment, const Eigen::
 	_aaccel_local = aaccel_local;
 	_g_local 	  = g_local;
 
-	if(_linear_case == false)
-	{
-		getDataMatrix(_A_curr); 
-		_ft = force_measurment;
-	}
-	else
-	{
-		getDataMatrixLin(_A_lin_curr);
-		_f = force_measurment;
-	}
+	getDataMatrix(_A_curr); 
+	_ft = force_measurment;
+
 
 	updateData();
 }
@@ -55,64 +41,29 @@ void LeastSquare::updateData()
 {	
 	_n_measurements++;
 
-	if(_linear_case == false)
+
+	if(_n_measurements==1)
 	{
-		if(_n_measurements==1)
-		{
-			_A = _A_curr;
-			_FT = _ft;
-		}
-		else
-		{
-			// Eigen::MatrixXd A_temp = _A;
-			// Eigen::VectorXd FT_temp = _FT;
-
-			// _A.resize(_n_measurements*6, 10);
-			// _FT.resize(_n_measurements*6);
-
-			// _A.topRows((_n_measurements-1)*6) = A_temp;
-			// _FT.topRows((_n_measurements-1)*6) = FT_temp;
-
-			// _A.bottomRows(6) = _A_curr;
-			// _FT.bottomRows(6) = _ft;
-			Eigen::MatrixXd A_temp = _A;
-			Eigen::VectorXd FT_temp = _FT;
-
-			_A.resize(_n_measurements*6, 10);
-			_FT.resize(_n_measurements*6);
-
-			_A.bottomRows((_n_measurements-1)*6) = A_temp;
-			_FT.bottomRows((_n_measurements-1)*6) = FT_temp;
-
-			_A.topRows(6) = _A_curr;
-			_FT.topRows(6) = _ft;
-		}
+		_A = _A_curr;
+		_FT = _ft;
 	}
 	else
 	{
-		if(_n_measurements == 1)
-		{
-			_A_lin = _A_lin_curr;
-			_F = _f;
-		}
+		Eigen::MatrixXd A_temp = _A;
+		Eigen::VectorXd FT_temp = _FT;
 
-		else
-		{
-			Eigen::MatrixXd A_temp = _A_lin;
-			Eigen::VectorXd F_temp = _F;
+		_A.resize(_n_measurements*6, 10);
+		_FT.resize(_n_measurements*6);
 
-			_A_lin.resize(_n_measurements*3, 4);
-			_F.resize(_n_measurements*3);
+		_A.bottomRows((_n_measurements-1)*6) = A_temp;
+		_FT.bottomRows((_n_measurements-1)*6) = FT_temp;
 
-			_A_lin.topRows((_n_measurements-1)*3) = A_temp;
-			_F.topRows((_n_measurements-1)*3) = F_temp;
-
-			_A_lin.bottomRows(3) = _A_lin_curr;
-			_F.bottomRows(3) = _f;
-		}
+		_A.topRows(6) = _A_curr;
+		_FT.topRows(6) = _ft;
 	}
-
 }
+
+
 
 
 void LeastSquare::getDataMatrix(Eigen::MatrixXd& A_data)
@@ -179,47 +130,19 @@ void LeastSquare::getDataMatrix(Eigen::MatrixXd& A_data)
 
 }
 
-void LeastSquare::getDataMatrixLin(Eigen::MatrixXd& A_data_lin) 
-{	
-	Eigen::MatrixXd A_full = Eigen::MatrixXd::Zero(6,10);
-	getDataMatrix(A_full);
-	A_data_lin = A_full.block(0,0,3,4);
-}
+
 
 
 Eigen::VectorXd LeastSquare::getInertialParameterVector()
 {	
-	if(_linear_case == false)
-	{
-		_phi = _A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(_FT);
+	
+	_phi = _A.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(_FT);
 
-		return _phi;
-	}
-	else
-	{
-		_phi_lin = _A_lin.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(_F);
-
-		return _phi_lin;
-	}
-
-
+	return _phi;
 	
 }
 
-Eigen::Vector3d LeastSquare::computeContactForce(const Eigen::Vector3d& force_measured,const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local)
-{	
-	_accel_local  = accel_local;
-	_avel_local   = avel_local;
-	_aaccel_local = aaccel_local;
-	_g_local 	  = g_local;
-	_phi_lin	  = phi;
 
-	getDataMatrixLin(_A_lin);
-
-	_f_contact = force_measured - _A_lin * _phi_lin;
-
-	return _f_contact;
-}
 
 Eigen::VectorXd LeastSquare::computeContactForceTorque(const Eigen::VectorXd& force_torque_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local)
 {
@@ -229,7 +152,7 @@ Eigen::VectorXd LeastSquare::computeContactForceTorque(const Eigen::VectorXd& fo
 	_g_local 	  = g_local;
 	_phi     	  = phi;
 
-	getDataMatrixLin(_A);
+	getDataMatrix(_A);
 
 	_ft_contact = force_torque_measured - _A * _phi;
 

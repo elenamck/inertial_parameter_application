@@ -51,30 +51,6 @@ public:
 	*/
 	void init(double t0, const Eigen::VectorXd& x0);
 
-	/**
-	* Computes the 2 Norm (Eucledian Norm)
-	*/
-	double TwoNorm(const Eigen::Vector3d& z); 
-
-	/**
-	* Computes the angular increment of a time step
-	*/
-	Eigen::Vector3d AngularIncrement(const Eigen::Vector3d w, const Eigen::Vector3d w_dot);
-
-	/**
-	* State evolution: computes f based on:
-	* - exponential integration of q * e^(1/2*(omega*dt + 1/2*omega_dot*dt^2))
-	* - Euler integration of omega
-	* - Euler integration of omega_dot
-	* evaluated at current state estimates
-	*/
-	void StateEvolution(); 
-
-	/**
-	* Computes the jacobian matrix F = df/dx evaluated at current state estimates
-	*/
-	void Jacobian();
-
 
 	/**
 	* Update the estimated state based on measured values
@@ -112,6 +88,32 @@ public:
 	double time();
 	
 private:
+
+	/**
+	* Computes the 2 Norm (Eucledian Norm)
+	*/
+	double TwoNorm(const Eigen::Vector3d& z); 
+
+	/**
+	* Computes the angular increment of a time step
+	*/
+	Eigen::Vector3d AngularIncrement(const Eigen::Vector3d w, const Eigen::Vector3d w_dot);
+
+	/**
+	* State evolution: computes f based on:
+	* - exponential integration of q * e^(1/2*(omega*dt + 1/2*omega_dot*dt^2))
+	* - Euler integration of omega
+	* - Euler integration of omega_dot
+	* evaluated at current state estimates
+	*/
+	void StateEvolution(); 
+
+	/**
+	* Computes the jacobian matrix F = df/dx evaluated at current state estimates
+	*/
+	void Jacobian();
+
+
 	//nonlinear systems dynamics function
 	Eigen::VectorXd f;
 

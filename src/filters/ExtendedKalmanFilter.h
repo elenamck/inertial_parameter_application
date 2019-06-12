@@ -69,9 +69,9 @@ public:
 private:
 	//nonlinear systems dynamics function
 	Eigen::VectorXd f;
-
+	Eigen::VectorXd _f;
 	//Matrices for computation - with Kalman gain K and initial error covariance matrix P0
-	Eigen::MatrixXd F, C, Q, R, P, K, P0;
+	Eigen::MatrixXd F, _F, C, Q, R, P, K, P0;
 
 
 	//System dimensions
@@ -79,9 +79,9 @@ private:
 
 	//Initial and current time
 	double t0, t;
-
+	double _t0, _t;
 	//discrete time step
-	double dt;
+	double dt, _dt;
 
 	//Is the filter initialized?
 	bool initialized;

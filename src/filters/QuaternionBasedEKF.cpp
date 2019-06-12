@@ -240,13 +240,7 @@ void QuaternionBasedEKF::update(const Eigen::VectorXd& y){
  	t+=dt;
 }
 
-void QuaternionBasedEKF::update(const Eigen::VectorXd& y, double dt, 
-							    const Eigen::VectorXd f, const Eigen::MatrixXd F){
-	this->f = f;
-	this->F = F;
-	this->dt = dt;
-	update(y);
-}
+
 
 
 Eigen::VectorXd QuaternionBasedEKF::state() 

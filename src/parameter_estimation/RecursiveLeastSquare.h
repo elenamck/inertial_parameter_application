@@ -11,77 +11,47 @@ class RecursiveLeastSquare
 public:
 	/**
 	 * @brief Recursive Least Square estimation
-	 * @param filer_size      determines how many matrices should be stacked for computation
-	 * @param Lambda 		  measurement noise covariance matrix, in linear case of size 3x3, else 6x6
+	 * @param filer_size      determines how many matrices should be stacked for one step
+	 * @param Lambda 		  measurement noise covariance matrix, size:6x6
 	 */
-	RecursiveLeastSquare(bool lin, int filter_size, const Eigen::MatrixXd& Lambda);
+	RecursiveLeastSquare(int filter_size, const Eigen::MatrixXd& Lambda);
+
+
 
 	//------------------------------------------------
 	// Methods
 	//------------------------------------------------
-	/**
-	* @brief adds measurements to the algorithm, stacks the data matrix and force vector, updates the RLS
-	* @param force_measurement		force (linear case) or force/torque measurements with respect to force sensor frame
-	* @param accel_local 			linear acceleration with respect to force sensor frame
-	* @param avel_locel 			angular velocity with respect to force sensor frame
-	* @param aaccel_local 			angular acceleration with respect to frame
-	* @param g_local 				gravity with respect to force sensor frame
-	*/
 
+
+	/**
+	* @brief initializes the estimation task
+	*/
 	void init();
 
-
+	/**
+	* @brief adds measurements to the algorithm, stacks the data matrix and force vector, updates the current estimation of the inertial parameters
+	* @param force_measurement		force/torque measurements with respect to force sensor frame
+	* @param accel_local 			linear acceleration with respect to force sensor frame
+	* @param avel_locel 			angular velocity with respect to force sensor frame
+	* @param aaccel_local 			angular acceleration with respect to force sensor frame
+	* @param g_local 				gravity with respect to force sensor frame
+	*/
 	void addData(const Eigen::VectorXd& force_measurment, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
 
-	/**
-	* @brief stacks the matrices based on the given filter size
-	*/
-	void updateData();
 
-	/**
-	* @brief updates the current inertial parameter vector
-	*/
-	void updateParameters();
-
-
-	/**
-	* @brief 		computes the parameter covariance matrix
-	*/
-	Eigen::MatrixXd computeSigma();
-	/**
-	* @brief 		computes the parameter covariance matrix, linear case
-	*/
-	Eigen::MatrixXd computeSigmaLin();
-
-
-	/**
-	* @brief 		computes the gain matrix
-	*/
-	Eigen::MatrixXd computeK();
-	/**
-	* @brief 		computes the gain matrix, linear case
-	*/
-	Eigen::MatrixXd computeKLin();
-
-	/** 
-	* @brief 	computes data matrix based on 
- 	*"Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
- 	* @param 	A_data Matrix to which the data matrix will be written
- 	**/
-	void getDataMatrix(Eigen::MatrixXd& A_data);
-
-	/**  
-	* @brief 	computes linear data matrix based on 
- 	* "Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
- 	* @param 	A_data_lin Matrix to which the linear data matrix will be written
- 	**/
-	void getDataMatrixLin(Eigen::MatrixXd& A_data_lin);
 
 	/* 
-	* @brief returns inertial parameter vector (4x1) in linear case and full inertial parameter vector (10x1) else
-	*		 based on least squares 
- 	* 		 linear case: mass, mass*coordinates of center of mass
- 	*		 else: mass, mass*coordinates of center of mass, elements of the inertia matrix
+	* @brief returns  inertial parameter vector (10x1) based in recursive least squares
+ 	* output(0)	m
+ 	* output(1)	m*c_x
+ 	* output(2)	m*c_y
+ 	* output(3)	m*c_z
+ 	* output(4)	I_xx,
+ 	* output(5)	I_xy,
+ 	* output(6)	I_xz,
+ 	* output(7)	I_yy,
+ 	* output(8)	I_yz,
+ 	* output(9)	I_zz,
  	*/
 	Eigen::VectorXd getInertialParameterVector();
 
@@ -95,20 +65,69 @@ public:
 	* @param aaccel_local 	angular acceleration with respect to frame
 	* @param g_local 		gravity with respect to force sensor frame
 	*
- 	*/
-	Eigen::Vector3d computeContactForce(const Eigen::Vector3d& force_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
-
+	*/
 	Eigen::VectorXd computeContactForceTorque(const Eigen::VectorXd& force_torque_measured, const Eigen::VectorXd& phi, const Eigen::Vector3d& accel_local, const Eigen::Vector3d& avel_local, const Eigen::Vector3d& aaccel_local, const Eigen::Vector3d& g_local);
-	//Need to be called after addData()
+	
+	/*
+	* @brief returns the current data matrix
+	* needs to be called after addData()
+	*/
 	Eigen::MatrixXd getCurrentDataMatrix();
+	/*
+	* @brief returns the current force torque vector 
+	* needs to be called after addData()
+	*/	
 	Eigen::VectorXd getCurrentInputVector();
+
+	/*
+	* @brief returns the current stacked data matrices
+	*/	
 	Eigen::MatrixXd getCurrentDataMatrixStacked();
+
+	/*
+	* @brief returns the current stacked force/torque vectors
+	*/
 	Eigen::VectorXd getCurrentInputVectorStacked();
+
+
+	/*
+	* @brief returns the current gain matrix, size 10x6*filter_size
+	*/
 	Eigen::MatrixXd getCurrentGainMatrix();
+
+	/*
+	* @brief returns the current paraneter covariance matrix, size 10x10
+	*/
 	Eigen::MatrixXd getCurrentParameterCovarianceMatrix();
+
+	/*
+	* @brief returns the noise covariance matrix, size 6x6
+	*/
 	Eigen::MatrixXd getCurrentNoiseCovarianceMatrix();
 
 private:
+
+
+	/**
+	* @brief stacks the data matrix and the force torque vector
+	* 		 is called by addData() function
+	*/
+	void updateData();
+
+	/**
+	* @brief updates the current parameter covariance matrix, gain matrix and inertial parameter vector
+	* 		 is called by addData() function
+	*/
+	void updateParameters();
+
+	/** 
+	* @brief 	computes data matrix based on 
+ 	*"Improving Force Control Performance by Computational Elimination of Non-Contact Forces/Torques", D. Kubus, T. Kroeger, F. Wahl, ICRA 2008  
+ 	*			is called by addData() function
+ 	* @param 	A_data Matrix to which the data matrix will be written to
+ 	**/
+	void getDataMatrix(Eigen::MatrixXd& A_data);
+
 
 	Eigen::Vector3d _accel_local; 	//object linear acceleration in sensor frame
 	Eigen::Vector3d _aaccel_local; 	//object angular acceleration in sensor frame
@@ -116,27 +135,17 @@ private:
 	Eigen::Vector3d _g_local; 		//gravity vector in sensor frame
 	Eigen::MatrixXd _A_curr;		//current data matrix
 	Eigen::MatrixXd _A; 			//stack of data matrices
-	Eigen::MatrixXd _A_lin_curr; 	//current linear data matrix
-	Eigen::MatrixXd _A_lin; 		//stack of linear data matrices
 	Eigen::VectorXd _ft; 			//current force/torque measurement
 	Eigen::VectorXd _FT; 			//stack of force/torque measurements
-	Eigen::Vector3d _f; 			//current force measurement
-	Eigen::VectorXd _F; 			//stack of force measurements
 	Eigen::VectorXd _phi; 			//estimated inertial parameter vector
-	Eigen::VectorXd _phi_lin; 		//estimated inertial parameter vector
 	Eigen::VectorXd _ft_contact; 	//computed contact force
-	Eigen::Vector3d _f_contact; 	//computed contact force
 	Eigen::MatrixXd _Sigma;			//parameter covariance matrix
-	Eigen::MatrixXd _Sigma_lin;
 	Eigen::MatrixXd _K;				//gain matrix
-	Eigen::MatrixXd _K_lin;
-	Eigen::MatrixXd _Lambda;		//measurement noise covariance matrix, given
+	Eigen::MatrixXd _Lambda;	   //measurement noise covariance matrix
 	Eigen::MatrixXd _Lambda_filt;	//measurement noise covariance matrix, proper dimensions for filter size
-	Eigen::MatrixXd _Lambda_filt_lin;
 
 	int _n_measurements;			//measurement index
-	bool _linear_case;				//flag for linear case
-	int _filter_size;
+	int _filter_size;		//determines how many measurements will be stacked for one estimation step
 
 
 };

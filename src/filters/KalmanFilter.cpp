@@ -58,11 +58,6 @@ KalmanFilter::KalmanFilter(
 
  }
 
- void KalmanFilter::update(const Eigen::VectorXd& y, double dt, const Eigen::MatrixXd A){
- 	this->A = A;
- 	this->dt = dt;
- 	update(y);
- }
 
  Eigen::VectorXd KalmanFilter::state() 
 	{
