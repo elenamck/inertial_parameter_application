@@ -135,7 +135,7 @@ int main() {
 	VectorXd ddq = VectorXd::Zero(axis);
 
 
-	auto least_square = new ParameterEstimation::LeastSquare(false);
+	auto least_square = new ParameterEstimation::LeastSquare();
 	const string link_name = "link7";
 	const Vector3d pos_in_link = Vector3d(0,0,0.15);
 	MatrixXd Corr_mat = MatrixXd::Zero(6,6);

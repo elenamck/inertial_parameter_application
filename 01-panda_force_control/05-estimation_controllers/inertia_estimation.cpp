@@ -268,13 +268,11 @@ int main() {
 	Vector3d accel_kin = Vector3d::Zero();
 
 	//For Inertial Parameter Estimation
-	bool linear_case = true;
-	bool non_linear_case = false;
+
 	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
 	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
 
-	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
-	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,7,Lambda);
+	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(7,Lambda);
 
 
 	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame

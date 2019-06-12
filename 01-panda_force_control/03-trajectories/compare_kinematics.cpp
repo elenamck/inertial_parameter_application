@@ -267,14 +267,12 @@ int main() {
 	Matrix3d R_link = Matrix3d::Zero();
 
 	//For Inertial Parameter Estimation
-	bool linear_case = true;
-	bool non_linear_case = false;
 	Matrix3d Lambda_lin = 0.01*Matrix3d::Identity();
 	MatrixXd Lambda = 0.014 * MatrixXd::Identity(6,6);
 
-	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(linear_case,4,Lambda_lin);
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,2,Lambda);
-	auto LS = new ParameterEstimation::LeastSquare(false);
+	// auto RLS = new ParameterEstimation::RecursiveLeastSquare(4,Lambda_lin);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(2,Lambda);
+	auto LS = new ParameterEstimation::LeastSquare();
 
 
 	

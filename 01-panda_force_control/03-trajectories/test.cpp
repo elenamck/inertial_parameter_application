@@ -196,11 +196,10 @@ int main() {
 
 	//For Inertial Parameter Estimation
 
-	bool non_linear_case = false;
 	MatrixXd Lambda = 0.05 * MatrixXd::Identity(6,6);
 
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,6, Lambda);
-	auto LS = new ParameterEstimation::LeastSquare(non_linear_case);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(6, Lambda);
+	auto LS = new ParameterEstimation::LeastSquare();
 
 
 

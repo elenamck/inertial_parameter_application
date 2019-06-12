@@ -284,8 +284,7 @@ int main() {
 	Vector3d accel_kin = Vector3d::Zero();
 
 	//For Inertial Parameter Estimation
-	bool linear_case = true;
-	bool non_linear_case = false;
+
 
 	double lambda_factor = 0.07;
 	double lambda_factor_2 = 0.07;
@@ -301,8 +300,8 @@ int main() {
 	int filter_size = 3;
 	int filter_size_2 =10;
 
-	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,filter_size_2,Lambda_2);
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(non_linear_case,filter_size,Lambda);
+	auto RLS_2 = new ParameterEstimation::RecursiveLeastSquare(filter_size_2,Lambda_2);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(filter_size,Lambda);
 
 
 	Vector3d accel = Vector3d::Zero(); //object linear acceleration in base frame

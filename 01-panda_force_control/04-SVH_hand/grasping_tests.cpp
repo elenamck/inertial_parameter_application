@@ -376,8 +376,8 @@ int main() {
 
 	int filter_size = 4;
 
-	auto RLS = new ParameterEstimation::RecursiveLeastSquare(false,filter_size,Lambda);
-	auto LS = new ParameterEstimation::LeastSquare(false);
+	auto RLS = new ParameterEstimation::RecursiveLeastSquare(filter_size,Lambda);
+	auto LS = new ParameterEstimation::LeastSquare();
 
 
 	VectorXd phi_RLS = VectorXd::Zero(10); //inertial parameter vector
