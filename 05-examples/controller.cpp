@@ -88,24 +88,18 @@ string INERTIAL_PARAMS_KF_KEY;
 string INERTIAL_PARAMS_BUTTER_KEY;
 
 // - kinematics
-string POSITION_KEY;
-string LINEAR_VEL_KEY;
-string LINEAR_ACC_KEY;
-string ORIENTATION_KEY;
-string ANGULAR_VEL_GLOBAL_KEY;
-string ANGULAR_ACC_GLOBAL_KEY;
-
-
+string POSITION_KIN_KEY;
+string LINEAR_VEL_KIN_KEY;
+string LINEAR_ACC_KIN_KEY;
+string ORIENTATION_KIN_KEY;
+string ANGULAR_VEL_KIN_KEY;
+string ANGULAR_ACC_KIN_KEY;
 
 // - sinusoidal trajectory
 string JOINT_ANGLE_INPUTS_KEY;
 string JOINT_VELOCITIES_INPUTS_KEY;
 string JOINT_ACCELERATIONS_INPUTS_KEY;
 
-string INERTIAL_PARAMS_KEY;
-string EE_FORCE_SENSOR_UNBIASED_KEY;
-string POSITION_KEY;
-string LINEAR_VEL_KEY;
 
 #define  GOTO_INITIAL_CONFIG 	 0
 #define  SINUSODIAL				 1
@@ -126,7 +120,8 @@ int main() {
 		LINEAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::linear_acc";
 		ANGULAR_VEL_KEY = "sai2::DemoApplication::Panda::simulation::angular_vel";
 		ANGULAR_ACC_KEY = "sai2::DemoApplication::Panda::simulation::angular_acc";
-		LOCAL_GRAVITY_KEY =  "sai2::DemoApplication::Panda::simulation::g_local";
+
+		LOCAL_GRAVITY_KEY =  "sai2::DemoApplication::Panda::controller::g_local";
 		INERTIAL_PARAMS_KEY = "sai2::DemoApplication::Panda::controller::phi";
 
 		JOINT_ANGLE_INPUTS_KEY = "sai2::DemoApplication::Panda::desired::q";
@@ -145,38 +140,36 @@ int main() {
 		ROBOT_GRAVITY_KEY = "sai2::FrankaPanda::Clyde::sensors::model::robot_gravity";
 
 		ACCELEROMETER_DATA_KEY = "sai2::3spaceSensor::data::accelerometer";      
-		GYROSCOPE_DATA_KEY ="sai2::3spaceSensor::data::gyroscope";    
+		GYROSCOPE_DATA_KEY ="sai2::3spaceSensor::data::gyroscope";
 
-		//corrected sensor data(accelerometer: gravity removed, right frame, Gyroscope: right frame)
-		LINEAR_ACC_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel";
-		ANGULAR_VEL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel";
-		ANGULAR_ACC_KEY = "sai2::DemoApplication::FrankaPanda::controller::aaccel";
-		LOCAL_GRAVITY_KEY = "sai2::DemoApplication::FrankaPanda::controller::g_local";
+		JOINT_ANGLE_INPUTS_KEY = "sai2::FrankaPanda::Clyde::desired::q";
+		JOINT_VELOCITIES_INPUTS_KEY ="sai2::FrankaPanda::Clyde::desired::dq";
+		JOINT_ACCELERATIONS_INPUTS_KEY ="sai2::FrankaPanda::Clyde::desired::ddq";    
 
-		INERTIAL_PARAMS_KEY = "sai2::DemoApplication::FrankaPanda::controller::phi";
+		if(logging_estimation_inputs)
+		{
+			LINEAR_ACC_LP_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::linear_acc::lp";
+			ANGULAR_VEL_LP_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::angular_vel::lp";
+			ANGULAR_ACC_LP_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::angular_acc::lp";
+			FORCE_TORQUE_LP_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::force_torque::lp";
 
-		JOINT_ANGLE_INPUTS_KEY = "sai2::DemoApplication::FrankaPanda::desired::q";
-		JOINT_VELOCITIES_INPUTS_KEY ="sai2::DemoApplication::FrankaPanda::desired::dq";
+			LINEAR_ACC_BUTTER_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::linear_acc::lp";
+			ANGULAR_VEL_BUTTER_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::angular_vel::lp";
+			ANGULAR_ACC_BUTTER_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::angular_acc::lp";
+			FORCE_TORQUE_BUTTER_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::force_torque::lp";
 
-		LINEAR_ACC_LP_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel::lowpass";
-		ANGULAR_VEL_LP_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel::lowpass";
-		ANGULAR_ACC_LP_KEY = "sai2::DemoApplication::FrankaPanda::controller::aaccel::lowpass";
-
-
-
-
-		EE_FORCE_SENSOR_UNBIASED_KEY ="sai2::DemoApplication::FrankaPanda::controller::force_moment";	
-		if(logging_kinematics)
-		{	
-
-			POSITION_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos";
-			LINEAR_VEL_KEY = "sai2::DemoApplication::FrankaPanda::controller::vel";
-			POSITION_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::pos_global";
- 			LINEAR_VEL_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::vel_global";
-			LINEAR_ACC_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::accel_global";
-			ANGULAR_VEL_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::avel_global";
-			ANGULAR_ACC_GLOBAL_KEY = "sai2::DemoApplication::FrankaPanda::controller::aaccel_global"; 
+			LINEAR_ACC_KF_KEY= "sai2::FrankaPanda::Clyde::logging::estimation_inputs::linear_acc::lp";
+			ANGULAR_VEL_KF_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::angular_vel::lp";
+			ANGULAR_ACC_KF_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_inputs::angular_acc::lp";
 		}
+
+		if(logging_estimation_outputs)
+		{
+			INERTIAL_PARAMS_LP_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_outputs::lp";;
+			INERTIAL_PARAMS_BUTTER_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_outputs::butter";	
+			INERTIAL_PARAMS_KF_KEY = "sai2::FrankaPanda::Clyde::logging::estimation_outputs::kf";
+		}
+
 	}
 
 
