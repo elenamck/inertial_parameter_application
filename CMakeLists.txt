@@ -145,4 +145,6 @@ set (INERTIAL_PARAMERTER_APP_BINARY_DIR
 
 add_subdirectory(01-panda_force_control)
 add_subdirectory(02-utilities)
+add_subdirectory(05-examples)
+
 # add_subdirectory(03-tests)
