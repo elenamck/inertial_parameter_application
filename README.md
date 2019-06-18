@@ -16,6 +16,9 @@
   * test for mean filter
 * 04-matlab:
   * matlab files for waypoint trajectory generation with inverse kinematics
+* 05-examples:
+  * templates for estimation
+  * example estimation with lowpass filter
 * data_collection: plotting and logging python scripts for redis-keys
 * robot_models: includes models for FrankaEmika Panda arm and Kuka iiwa arm
 * src: source and header files for inertial parameter application
